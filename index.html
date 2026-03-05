@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的社交网络</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242836;
+  --border: #2e3348;
+  --text: #e4e6f0;
+  --text2: #9498b0;
+  --accent: #6c7cff;
+  --accent2: #4c5ce6;
+  --danger: #ff4d6a;
+  --success: #34d399;
+  --warn: #fbbf24;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ===== Sidebar ===== */
+#sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 320px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+}
+#sidebar.collapsed { transform: translateX(-320px); }
+
+#sidebar-toggle {
+  position: fixed;
+  left: 320px;
+  top: 12px;
+  z-index: 101;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  width: 32px; height: 32px;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease;
+  font-size: 14px;
+}
+#sidebar.collapsed ~ #sidebar-toggle { left: 0; }
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6c7cff, #b44cff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.sidebar-header p { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+.sidebar-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ===== Form Elements ===== */
+input[type="text"], select, textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+}
+select { cursor: pointer; }
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+  margin-top: 10px;
+}
+label:first-child { margin-top: 0; }
+
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+.form-row > * { flex: 1; }
+
+button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+button:hover { background: var(--border); }
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+button.primary:hover { background: var(--accent2); }
+button.danger { color: var(--danger); }
+button.danger:hover { background: rgba(255,77,106,0.15); }
+button.small { padding: 4px 10px; font-size: 12px; }
+button.full { width: 100%; margin-top: 12px; }
+
+/* ===== Tags ===== */
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.tag .remove-tag {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 13px;
+  line-height: 1;
+}
+.tag .remove-tag:hover { opacity: 1; }
+
+.tag-familiarity-密友 { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #f87171; }
+.tag-familiarity-熟悉 { background: rgba(251,146,60,0.15); border-color: rgba(251,146,60,0.3); color: #fb923c; }
+.tag-familiarity-一般 { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399; }
+.tag-familiarity-不太熟 { background: rgba(96,165,250,0.15); border-color: rgba(96,165,250,0.3); color: #60a5fa; }
+.tag-familiarity-只见过 { background: rgba(148,156,176,0.15); border-color: rgba(148,156,176,0.3); color: #9498b0; }
+
+.tag-contact { background: rgba(108,124,255,0.15); border-color: rgba(108,124,255,0.3); color: #8b9aff; }
+.tag-info { background: rgba(180,76,255,0.15); border-color: rgba(180,76,255,0.3); color: #c88bff; }
+.tag-relation { background: rgba(251,191,36,0.15); border-color: rgba(251,191,36,0.3); color: #fbbf24; }
+
+.tag-input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.tag-input-row input { flex: 1; padding: 5px 10px; font-size: 12px; }
+.tag-input-row button { padding: 5px 10px; font-size: 12px; }
+
+/* ===== Quick-add chips ===== */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: all 0.2s;
+  user-select: none;
+}
+.chip:hover { border-color: var(--accent); }
+.chip.selected {
+  background: rgba(108,124,255,0.2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip .chip-del {
+  margin-left: 2px;
+  opacity: 0;
+  font-size: 11px;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+.chip:hover .chip-del { opacity: 0.6; }
+.chip .chip-del:hover { opacity: 1; }
+.chip-add-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  width: 100%;
+}
+.chip-add-row input {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 14px;
+}
+.chip-add-row button {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 14px;
+}
+.chip.transitive {
+  border-style: dashed;
+  border-color: var(--warn);
+}
+.chip .trans-icon {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+/* ===== Graph ===== */
+#graph-container {
+  position: fixed;
+  left: 320px; top: 0; right: 0; bottom: 0;
+  transition: left 0.3s ease;
+}
+#sidebar.collapsed ~ #graph-container { left: 0; }
+
+svg { width: 100%; height: 100%; }
+
+.node-group { cursor: pointer; }
+.node-circle {
+  stroke-width: 2;
+  transition: r 0.3s, stroke-width 0.2s;
+}
+.node-group:hover .node-circle { stroke-width: 3; }
+.node-group.selected .node-circle { stroke-width: 4; stroke-dasharray: 4 2; }
+
+.node-label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: middle;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.node-tags-label {
+  fill: var(--text2);
+  font-size: 9px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.link {
+  stroke-opacity: 0.5;
+  transition: stroke-opacity 0.2s, stroke-width 0.2s;
+}
+.link:hover { stroke-opacity: 1; stroke-width: 3 !important; }
+.link.selected { stroke-opacity: 1; stroke-dasharray: 6 3; }
+
+.link-label {
+  fill: var(--text2);
+  font-size: 10px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* ===== Detail Panel ===== */
+#detail-panel {
+  position: fixed;
+  right: -380px;
+  top: 0; bottom: 0;
+  width: 360px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 100;
+  padding: 20px;
+  overflow-y: auto;
+  transition: right 0.3s ease;
+}
+#detail-panel.open { right: 0; }
+#detail-panel h2 {
+  font-size: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#detail-panel .close-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* ===== Context Menu ===== */
+#context-menu {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 180px;
+  z-index: 200;
+  display: none;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+#context-menu .menu-item {
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#context-menu .menu-item:hover { background: var(--surface2); }
+#context-menu .menu-item.danger { color: var(--danger); }
+#context-menu .separator {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ===== Stats Bar ===== */
+#stats-bar {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 20px;
+  font-size: 12px;
+  color: var(--text2);
+  z-index: 50;
+  display: flex;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#stats-bar span { display: flex; align-items: center; gap: 6px; }
+#stats-bar .num { color: var(--accent); font-weight: 700; font-size: 14px; }
+
+/* ===== Search ===== */
+#search-box {
+  position: relative;
+}
+#search-box input {
+  padding-left: 32px;
+}
+#search-box::before {
+  content: '⌕';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text2);
+  font-size: 14px;
+  pointer-events: none;
+}
+#search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.search-result {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.search-result:hover { background: var(--surface2); }
+.search-result .sr-tags { font-size: 10px; color: var(--text2); }
+
+/* ===== Autocomplete ===== */
+.autocomplete-list {
+  position: absolute;
+  left: 0; right: 0;
+  top: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+  display: none;
+  margin-top: 2px;
+}
+.autocomplete-list.show { display: block; }
+.autocomplete-item {
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+}
+.autocomplete-item:hover { background: var(--border); }
+.autocomplete-item .ac-sub { font-size: 10px; color: var(--text2); }
+
+/* ===== Filter bar ===== */
+#filter-bar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#filter-bar select {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== Tooltip ===== */
+.tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  z-index: 150;
+  pointer-events: none;
+  max-width: 280px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  display: none;
+}
+.tooltip .tt-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.tooltip .tt-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* ===== Unknown Panel ===== */
+.unknown-list { margin-top: 12px; }
+.unknown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  background: var(--surface2);
+  font-size: 13px;
+}
+.unknown-item .uk-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.unknown-item select { width: auto; min-width: 80px; padding: 4px 8px; font-size: 12px; }
+.unknown-section-title { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; }
+.unknown-section-title:first-child { margin-top: 0; }
+.unknown-empty { color: var(--text2); font-size: 13px; text-align: center; padding: 20px 0; }
+
+/* ===== Proximity Panel ===== */
+.prox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  position: relative;
+}
+.prox-item:hover { background: var(--surface2); }
+.prox-rank { width: 24px; text-align: right; color: var(--text2); font-size: 11px; font-weight: 600; }
+.prox-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.prox-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prox-score { font-size: 12px; font-weight: 600; min-width: 44px; text-align: right; }
+.prox-bar-bg { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px; opacity: 0.08; pointer-events: none; }
+
+/* ===== Relation Path Panel ===== */
+.path-vis { display:flex; align-items:center; gap:0; flex-wrap:wrap; margin:16px 0; padding:12px; background:var(--surface2); border-radius:12px; }
+.path-node { display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+.path-node-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#fff; }
+.path-node-name { font-size:11px; margin-top:4px; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.path-edge { display:flex; flex-direction:column; align-items:center; padding:0 6px; }
+.path-edge-line { width:40px; height:2px; background:var(--border); }
+.path-edge-label { font-size:9px; color:var(--text2); margin-top:2px; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h2 { font-size: 18px; margin-bottom: 16px; }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+/* ===== Legend ===== */
+#legend {
+  position: fixed;
+  bottom: 60px;
+  right: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 11px;
+  z-index: 50;
+}
+#legend h4 { color: var(--text2); margin-bottom: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <h1>Social Graph</h1>
+    <p>可视化你的社交网络</p>
+  </div>
+  <div class="sidebar-scroll">
+    <!-- Quick Add -->
+    <div class="sidebar-section">
+      <h3>快速添加</h3>
+      <label>姓名</label>
+      <input type="text" id="add-name" placeholder="输入姓名..." autocomplete="off">
+
+      <label>连接到</label>
+      <div id="search-box">
+        <input type="text" id="connect-to" placeholder="搜索已有人物... (默认: 我)" autocomplete="off">
+        <div id="search-results"></div>
+      </div>
+
+      <label>熟悉程度</label>
+      <div class="chip-group" id="familiarity-chips"></div>
+
+      <label>联系方式 (可多选)</label>
+      <div class="chip-group multi" id="contact-chips"></div>
+
+      <label>关系 (可多选) <span style="font-size:10px;color:var(--text2);font-weight:400">右键切换传递性</span></label>
+      <div class="chip-group multi" id="relation-chips"></div>
+
+      <label>个人标签 (可多选)</label>
+      <div class="chip-group multi" id="info-chips"></div>
+
+      <button class="primary full" id="btn-add" onclick="quickAdd()">添加到网络</button>
+    </div>
+
+    <!-- Connect Existing -->
+    <div class="sidebar-section">
+      <h3>连接已有节点</h3>
+      <div class="form-row">
+        <div style="position:relative">
+          <label>人物 A</label>
+          <input type="text" id="connect-a" placeholder="搜索..." autocomplete="off">
+          <div class="autocomplete-list" id="connect-a-results"></div>
+        </div>
+        <div style="position:relative">
+          <label>人物 B</label>
+          <input type="text" id="connect-b" placeholder="搜索..." autocomplete="off">
+          <div class="autocomplete-list" id="connect-b-results"></div>
+        </div>
+      </div>
+      <label>关系 (可多选)</label>
+      <div class="chip-group multi" id="connect-relation-chips"></div>
+      <button class="full" onclick="connectExisting()">建立连接</button>
+    </div>
+
+    <!-- Batch Connect -->
+    <div class="sidebar-section">
+      <h3>批量连接</h3>
+      <label>选择人物</label>
+      <div style="position:relative">
+        <input type="text" id="batch-person" placeholder="搜索人物..." autocomplete="off">
+        <div class="autocomplete-list" id="batch-person-results"></div>
+      </div>
+      <label>连接到所有含此标签的人</label>
+      <select id="batch-match-tag"></select>
+      <label>关系标签</label>
+      <select id="batch-rel-tag"></select>
+      <label>边熟悉程度</label>
+      <select id="batch-edge-fam"></select>
+      <button class="full" onclick="batchConnect()">批量连接</button>
+    </div>
+
+    <!-- View -->
+    <div class="sidebar-section">
+      <h3>视图</h3>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:0">
+        <input type="checkbox" id="show-node-labels" checked onchange="toggleLabel()"> 显示节点标签
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="show-edge-labels" onchange="toggleLabel()"> 显示边标签
+      </label>
+    </div>
+
+    <!-- File Sync -->
+    <div class="sidebar-section">
+      <h3>文件同步</h3>
+      <div id="file-status" style="font-size:12px;color:var(--text2);margin-bottom:8px;">未绑定文件</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="small" onclick="bindFile()">绑定本地文件</button>
+        <button class="small" onclick="unbindFile()">解除绑定</button>
+        <button class="small" onclick="loadFromFile()">从文件加载</button>
+      </div>
+    </div>
+
+    <!-- Tools -->
+    <div class="sidebar-section">
+      <h3>工具</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="small" onclick="exportData()">导出 JSON</button>
+        <button class="small" onclick="document.getElementById('import-file').click()">导入 JSON</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        <button class="small" onclick="showUnknownPanel()">Unknown 管理</button>
+        <button class="small" onclick="showProximityPanel()">Proximity 排行</button>
+        <button class="small" onclick="showRelationPathPanel()">关系路径</button>
+        <button class="small" onclick="resetLayout()">重置布局</button>
+        <button class="small danger" onclick="confirmClear()">清空数据</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="sidebar-toggle" onclick="toggleSidebar()">◀</button>
+
+<!-- Filter Bar -->
+<div id="filter-bar">
+  <select id="filter-familiarity" onchange="applyFilter()">
+    <option value="">全部熟悉度</option>
+  </select>
+  <select id="filter-relation" onchange="applyFilter()">
+    <option value="">全部关系</option>
+  </select>
+</div>
+
+<!-- Graph -->
+<div id="graph-container">
+  <svg id="graph-svg"></svg>
+</div>
+
+<!-- Detail Panel -->
+<div id="detail-panel">
+  <div id="detail-content"></div>
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu"></div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Stats Bar -->
+<div id="stats-bar">
+  <span>人物 <span class="num" id="stat-nodes">0</span></span>
+  <span>关系 <span class="num" id="stat-edges">0</span></span>
+  <span>圈子 <span class="num" id="stat-groups">0</span></span>
+</div>
+
+<!-- Legend -->
+<div id="legend"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ===== Data Model =====
+const FAMILIARITY_COLORS = {
+  '密友': '#ef4444',
+  '熟悉': '#fb923c',
+  '一般': '#34d399',
+  '不太熟': '#60a5fa',
+  '只见过': '#6b7280',
+  '没见过': '#555870',
+  'unknown': '#555870'
+};
+const CUSTOM_FAM_COLORS = ['#f472b6','#a78bfa','#38bdf8','#2dd4bf','#facc15','#fb7185','#818cf8','#22d3ee'];
+
+const DEFAULT_CHIPS = {
+  familiarity: ['密友', '熟悉', '一般', '不太熟', '只见过', 'unknown'],
+  contacts: ['微信', '电话', '邮箱', 'QQ', '无'],
+  relations: ['同学', '同事', '朋友', '家人', '亲戚', '邻居', '网友'],
+  info: ['北京', '上海', '程序员', '学生', '设计师']
+};
+
+function loadCustomChips() {
+  try {
+    const saved = localStorage.getItem('social-graph-custom-chips');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return { familiarity: [], contacts: [], relations: [], info: [] };
+}
+function saveCustomChips() {
+  localStorage.setItem('social-graph-custom-chips', JSON.stringify(userChips));
+  saveToFile();
+}
+let userChips = loadCustomChips();
+
+function getAllChips(category) {
+  return [...DEFAULT_CHIPS[category], ...(userChips[category] || [])];
+}
+
+// ===== Transitivity =====
+function loadTransitive() {
+  try {
+    const saved = localStorage.getItem('social-graph-transitive');
+    if (saved) return new Set(JSON.parse(saved));
+  } catch(e) {}
+  return new Set();
+}
+function saveTransitive() {
+  localStorage.setItem('social-graph-transitive', JSON.stringify([...transitiveSet]));
+  saveToFile();
+}
+let transitiveSet = loadTransitive();
+
+function isTransitive(rel) { return transitiveSet.has(rel); }
+function toggleTransitive(rel) {
+  if (transitiveSet.has(rel)) transitiveSet.delete(rel);
+  else transitiveSet.add(rel);
+  saveTransitive();
+}
+
+// Helper: find or create edge between two nodes, return count of new relations added
+function ensureEdge(idA, idB, rel) {
+  const existing = data.edges.find(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return (sid === idA && tid === idB) || (sid === idB && tid === idA);
+  });
+  if (existing) {
+    if (!existing.relations.includes(rel)) {
+      existing.relations.push(rel);
+      return 1;
+    }
+    return 0;
+  }
+  data.edges.push({ id: genEdgeId(), source: idA, target: idB, relations: [rel], familiarity: 'unknown' });
+  return 1;
+}
+
+// Apply transitivity for a single new edge: nodeId <-> targetId
+function applyTransitivity(nodeId, targetId, relations) {
+  const transRels = relations.filter(r => isTransitive(r));
+  if (transRels.length === 0) return 0;
+  let autoCount = 0;
+  transRels.forEach(rel => {
+    // Find all nodes connected to targetId via this relation (excluding nodeId)
+    data.edges.forEach(e => {
+      const sid = typeof e.source === 'object' ? e.source.id : e.source;
+      const tid = typeof e.target === 'object' ? e.target.id : e.target;
+      if (!(e.relations || []).includes(rel)) return;
+      let peerId = null;
+      if (sid === targetId) peerId = tid;
+      else if (tid === targetId) peerId = sid;
+      if (peerId && peerId !== nodeId && peerId !== targetId) {
+        autoCount += ensureEdge(nodeId, peerId, rel);
+      }
+    });
+  });
+  return autoCount;
+}
+
+// Full transitive closure: for a given relation, compute all connected components
+// and ensure every pair within each component shares an edge with that relation.
+function applyFullTransitiveClosure(rel) {
+  // Build adjacency for this relation
+  const adj = {};
+  data.nodes.forEach(n => { adj[n.id] = new Set(); });
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if ((e.relations || []).includes(rel)) {
+      if (adj[sid]) adj[sid].add(tid);
+      if (adj[tid]) adj[tid].add(sid);
+    }
+  });
+
+  // Find connected components via BFS
+  const visited = new Set();
+  let totalAdded = 0;
+  data.nodes.forEach(n => {
+    if (visited.has(n.id) || adj[n.id].size === 0) return;
+    const component = [];
+    const queue = [n.id];
+    while (queue.length) {
+      const cur = queue.shift();
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      component.push(cur);
+      adj[cur].forEach(nb => { if (!visited.has(nb)) queue.push(nb); });
+    }
+    // Connect all pairs in this component
+    for (let i = 0; i < component.length; i++) {
+      for (let j = i + 1; j < component.length; j++) {
+        totalAdded += ensureEdge(component[i], component[j], rel);
+      }
+    }
+  });
+  return totalAdded;
+}
+
+function getFamiliarityColor(name) {
+  if (FAMILIARITY_COLORS[name]) return FAMILIARITY_COLORS[name];
+  const idx = (userChips.familiarity || []).indexOf(name);
+  if (idx >= 0) return CUSTOM_FAM_COLORS[idx % CUSTOM_FAM_COLORS.length];
+  return '#6b7280';
+}
+
+const DEFAULT_DATA = {
+  nodes: [
+    { id: 'me', name: '我', familiarity: '密友', contacts: [], tags: ['中心'], x: 0, y: 0, fx: null, fy: null }
+  ],
+  edges: []
+};
+
+let data = loadData();
+
+// One-time migration: set non-me edges to unknown familiarity
+if (!localStorage.getItem('social-graph-migrated-unknown')) {
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (sid !== 'me' && tid !== 'me') {
+      e.familiarity = 'unknown';
+    }
+  });
+  localStorage.setItem('social-graph-migrated-unknown', '1');
+}
+
+let selectedNodeId = null;
+let selectedEdgeId = null;
+let connectTarget = null;  // for quick-add connect-to
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem('social-graph-data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.nodes && parsed.nodes.length > 0) return parsed;
+    }
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function saveData() {
+  // Save current positions
+  data.nodes.forEach(n => {
+    const simNode = simulation.nodes().find(sn => sn.id === n.id);
+    if (simNode) {
+      n.x = simNode.x;
+      n.y = simNode.y;
+    }
+  });
+  localStorage.setItem('social-graph-data', JSON.stringify(data));
+  // Auto-save to bound file
+  saveToFile();
+}
+
+// ===== File System Persistence =====
+let fileHandle = null;
+let fileSaveTimer = null;
+
+// IndexedDB to persist the file handle across sessions
+function openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('social-graph-filehandle', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function storeHandle(handle) {
+  const db = await openHandleDB();
+  const tx = db.transaction('handles', 'readwrite');
+  tx.objectStore('handles').put(handle, 'primary');
+  return new Promise(r => { tx.oncomplete = r; });
+}
+
+async function getStoredHandle() {
+  const db = await openHandleDB();
+  const tx = db.transaction('handles', 'readonly');
+  const req = tx.objectStore('handles').get('primary');
+  return new Promise(r => { req.onsuccess = () => r(req.result || null); });
+}
+
+async function clearStoredHandle() {
+  const db = await openHandleDB();
+  const tx = db.transaction('handles', 'readwrite');
+  tx.objectStore('handles').delete('primary');
+}
+
+function updateFileStatus(msg, ok) {
+  const el = document.getElementById('file-status');
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--success)' : 'var(--text2)';
+}
+
+async function bindFile() {
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'social-graph.json',
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+    });
+    await storeHandle(fileHandle);
+    await writeFile();
+    updateFileStatus('已绑定: ' + fileHandle.name, true);
+    toast('文件已绑定，自动保存已开启');
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('绑定失败: ' + e.message);
+  }
+}
+
+function unbindFile() {
+  fileHandle = null;
+  clearStoredHandle();
+  updateFileStatus('未绑定文件', false);
+  toast('已解除文件绑定');
+}
+
+async function writeFile() {
+  if (!fileHandle) return;
+  try {
+    const writable = await fileHandle.createWritable();
+    const fullData = {
+      graph: data,
+      customChips: userChips,
+      transitive: [...transitiveSet]
+    };
+    await writable.write(JSON.stringify(fullData, null, 2));
+    await writable.close();
+  } catch (e) {
+    console.warn('File write failed:', e);
+  }
+}
+
+function saveToFile() {
+  if (!fileHandle) return;
+  // Debounce: wait 500ms after last change before writing
+  clearTimeout(fileSaveTimer);
+  fileSaveTimer = setTimeout(() => writeFile(), 500);
+}
+
+async function loadFromFile() {
+  if (!fileHandle) { toast('请先绑定文件'); return; }
+  try {
+    const perm = await fileHandle.queryPermission({ mode: 'read' });
+    if (perm !== 'granted') {
+      const req = await fileHandle.requestPermission({ mode: 'read' });
+      if (req !== 'granted') { toast('没有读取权限'); return; }
+    }
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (parsed.graph && parsed.graph.nodes) {
+      data = parsed.graph;
+      if (parsed.customChips) {
+        userChips = parsed.customChips;
+        saveCustomChips();
+      }
+      if (parsed.transitive) {
+        transitiveSet = new Set(parsed.transitive);
+        saveTransitive();
+      }
+      localStorage.setItem('social-graph-data', JSON.stringify(data));
+      renderChipGroup('familiarity', 'familiarity-chips', false);
+      renderChipGroup('contacts', 'contact-chips', true);
+      renderChipGroup('relations', 'relation-chips', true);
+      renderChipGroup('info', 'info-chips', true);
+      renderConnectRelationChips();
+      render();
+      centerView();
+      toast('已从文件加载');
+    } else {
+      toast('文件格式无效');
+    }
+  } catch (e) {
+    toast('加载失败: ' + e.message);
+  }
+}
+
+// Try to restore file handle on startup
+async function restoreFileHandle() {
+  try {
+    const stored = await getStoredHandle();
+    if (!stored) return;
+    const perm = await stored.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      fileHandle = stored;
+      updateFileStatus('已绑定: ' + fileHandle.name, true);
+      return;
+    }
+    // Need user gesture to request permission — show a prompt
+    fileHandle = stored;
+    updateFileStatus('点击此处恢复: ' + stored.name, false);
+    document.getElementById('file-status').style.cursor = 'pointer';
+    document.getElementById('file-status').onclick = async () => {
+      const req = await stored.requestPermission({ mode: 'readwrite' });
+      if (req === 'granted') {
+        fileHandle = stored;
+        updateFileStatus('已绑定: ' + fileHandle.name, true);
+        document.getElementById('file-status').onclick = null;
+        document.getElementById('file-status').style.cursor = '';
+        toast('文件连接已恢复');
+      }
+    };
+  } catch(e) {
+    console.warn('Restore handle failed:', e);
+  }
+}
+restoreFileHandle();
+
+function genId() { return 'n_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5); }
+function genEdgeId() { return 'e_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5); }
+
+// ===== D3 Setup =====
+const svg = d3.select('#graph-svg');
+const container = svg.append('g');
+
+// Arrow marker for directed edges (optional)
+svg.append('defs').append('marker')
+  .attr('id', 'arrow')
+  .attr('viewBox', '0 -5 10 10')
+  .attr('refX', 20)
+  .attr('refY', 0)
+  .attr('markerWidth', 6)
+  .attr('markerHeight', 6)
+  .attr('orient', 'auto')
+  .append('path')
+  .attr('d', 'M0,-5L10,0L0,5')
+  .attr('fill', '#4a4e69');
+
+const linkGroup = container.append('g').attr('class', 'links');
+const linkLabelGroup = container.append('g').attr('class', 'link-labels');
+const nodeGroup = container.append('g').attr('class', 'nodes');
+
+// Zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.1, 5])
+  .on('zoom', (event) => {
+    container.attr('transform', event.transform);
+  });
+svg.call(zoom);
+
+// Center view
+function centerView() {
+  const svgEl = document.getElementById('graph-svg');
+  const w = svgEl.clientWidth;
+  const h = svgEl.clientHeight;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(w/2, h/2).scale(0.8));
+}
+
+// Familiarity weight: higher = closer pull
+const FAMILIARITY_WEIGHT = { '密友': 5, '熟悉': 4, '一般': 3, '不太熟': 2, '只见过': 1, '没见过': 1, 'unknown': 2 };
+function getFamiliarityWeight(name) {
+  if (FAMILIARITY_WEIGHT[name] !== undefined) return FAMILIARITY_WEIGHT[name];
+  return 3; // default for custom familiarity
+}
+
+// Get the effective familiarity for an edge
+function getEdgeFamiliarity(d) {
+  // If edge has its own familiarity, use it
+  if (d.familiarity) return d.familiarity;
+  // Also check from data.edges in case d is a simulation copy
+  const edgeData = data.edges.find(e => e.id === d.id);
+  if (edgeData && edgeData.familiarity) return edgeData.familiarity;
+  // For edges connected to "me", use the other node's familiarity
+  const sid = typeof d.source === 'object' ? d.source.id : d.source;
+  const tid = typeof d.target === 'object' ? d.target.id : d.target;
+  if (sid === 'me' || tid === 'me') {
+    const otherId = sid === 'me' ? tid : sid;
+    const other = data.nodes.find(n => n.id === otherId);
+    return other?.familiarity || '一般';
+  }
+  return 'unknown';
+}
+
+function edgeWeight(d) {
+  return getFamiliarityWeight(getEdgeFamiliarity(d));
+}
+
+// Simulation
+const simulation = d3.forceSimulation()
+  .force('link', d3.forceLink().id(d => d.id)
+    .distance(d => 900 - edgeWeight(d) * 130)   // 密友:250, 只见过:770
+    .strength(d => {
+      // Weaken link strength when both endpoints have many connections
+      const sid = typeof d.source === 'object' ? d.source.id : d.source;
+      const tid = typeof d.target === 'object' ? d.target.id : d.target;
+      const sCount = data.edges.filter(e => {
+        const a = typeof e.source === 'object' ? e.source.id : e.source;
+        const b = typeof e.target === 'object' ? e.target.id : e.target;
+        return a === sid || b === sid;
+      }).length || 1;
+      const tCount = data.edges.filter(e => {
+        const a = typeof e.source === 'object' ? e.source.id : e.source;
+        const b = typeof e.target === 'object' ? e.target.id : e.target;
+        return a === tid || b === tid;
+      }).length || 1;
+      const base = 0.02 + edgeWeight(d) * 0.06; // 密友:0.32, 只见过:0.08
+      return base / Math.sqrt(Math.max(sCount, tCount));
+    })
+  )
+  .force('charge', d3.forceManyBody().strength(-3000).distanceMax(2000))
+  .force('collision', d3.forceCollide().radius(d => getNodeRadius(d) + 80).strength(1))
+  .force('center', d3.forceCenter(0, 0).strength(0.02))
+  .on('tick', ticked);
+
+function getNodeRadius(d) {
+  if (d.id === 'me') return 30;
+  const edgeCount = data.edges.filter(e => e.source === d.id || e.target === d.id ||
+    (e.source && e.source.id === d.id) || (e.target && e.target.id === d.id)).length;
+  // Asymptotic growth: 5 + 23 * (1 - e^(-count/15))  →  approaches 28
+  return 5 + 23 * (1 - Math.exp(-edgeCount / 15));
+}
+
+function getNodeColor(d) {
+  return getFamiliarityColor(d.familiarity);
+}
+
+function getEdgeColor(e) {
+  const fam = getEdgeFamiliarity(e);
+  return getFamiliarityColor(fam);
+}
+
+function ticked() {
+  container.selectAll('.link')
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  container.selectAll('.link-label')
+    .each(function(d) {
+      const dx = d.target.x - d.source.x;
+      const dy = d.target.y - d.source.y;
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      // Keep text readable (not upside down)
+      if (angle > 90) angle -= 180;
+      if (angle < -90) angle += 180;
+      const mx = (d.source.x + d.target.x) / 2;
+      const my = (d.source.y + d.target.y) / 2;
+      // Offset slightly perpendicular so text doesn't sit on the line
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const ox = -dy / len * 10;
+      const oy = dx / len * 10;
+      d3.select(this)
+        .attr('x', mx + ox)
+        .attr('y', my + oy)
+        .attr('transform', `rotate(${angle},${mx + ox},${my + oy})`);
+    });
+
+  container.selectAll('.node-group')
+    .attr('transform', d => `translate(${d.x},${d.y})`);
+}
+
+// ===== Render =====
+function render() {
+  // Prepare edge data (resolve source/target to objects if needed)
+  const simNodes = data.nodes.map(n => {
+    const existing = simulation.nodes().find(sn => sn.id === n.id);
+    if (existing) {
+      return Object.assign(existing, n);
+    }
+    return { ...n, x: n.x || (Math.random() - 0.5) * 300, y: n.y || (Math.random() - 0.5) * 300 };
+  });
+
+  const simEdges = data.edges.map(e => ({
+    ...e,
+    source: e.source,
+    target: e.target
+  }));
+
+  // Apply filter
+  const filterFam = document.getElementById('filter-familiarity').value;
+  const filterRel = document.getElementById('filter-relation').value;
+
+  let visibleNodeIds = new Set(data.nodes.map(n => n.id));
+  if (filterFam) {
+    visibleNodeIds = new Set(data.nodes.filter(n => n.id === 'me' || n.familiarity === filterFam).map(n => n.id));
+  }
+  if (filterRel) {
+    const relNodeIds = new Set(['me']);
+    data.edges.forEach(e => {
+      const sid = typeof e.source === 'object' ? e.source.id : e.source;
+      const tid = typeof e.target === 'object' ? e.target.id : e.target;
+      if (e.relations && e.relations.includes(filterRel)) {
+        relNodeIds.add(sid);
+        relNodeIds.add(tid);
+      }
+    });
+    visibleNodeIds = new Set([...visibleNodeIds].filter(id => relNodeIds.has(id)));
+  }
+
+  const filteredNodes = simNodes.filter(n => visibleNodeIds.has(n.id));
+  const filteredEdges = simEdges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return visibleNodeIds.has(sid) && visibleNodeIds.has(tid);
+  });
+
+  // Links
+  const links = linkGroup.selectAll('.link')
+    .data(filteredEdges, d => d.id);
+  links.exit().remove();
+  const linksEnter = links.enter().append('line')
+    .attr('class', 'link')
+    .on('click', (event, d) => { event.stopPropagation(); selectEdge(d); })
+    .on('contextmenu', (event, d) => { event.preventDefault(); showEdgeContextMenu(event, d); });
+  links.merge(linksEnter)
+    .attr('stroke', d => getEdgeColor(d))
+    .attr('stroke-width', d => 1 + edgeWeight(d) * 0.6)
+    .classed('selected', d => d.id === selectedEdgeId);
+
+  // Link labels
+  const linkLabels = linkLabelGroup.selectAll('.link-label')
+    .data(filteredEdges, d => d.id);
+  linkLabels.exit().remove();
+  linkLabelGroup.selectAll('.link-label-bg').remove();
+
+  const llEnter = linkLabels.enter();
+  llEnter.append('text')
+    .attr('class', 'link-label');
+  const showEdgeLabels = document.getElementById('show-edge-labels').checked;
+  linkLabelGroup.selectAll('.link-label')
+    .text(d => showEdgeLabels ? (d.relations || []).join(', ') : '');
+
+  // Nodes
+  const nodes = nodeGroup.selectAll('.node-group')
+    .data(filteredNodes, d => d.id);
+  nodes.exit().remove();
+
+  const nodesEnter = nodes.enter().append('g')
+    .attr('class', 'node-group')
+    .on('click', (event, d) => { event.stopPropagation(); selectNode(d); })
+    .on('contextmenu', (event, d) => { event.preventDefault(); showNodeContextMenu(event, d); })
+    .on('mouseenter', (event, d) => showTooltip(event, d))
+    .on('mouseleave', hideTooltip)
+    .call(d3.drag()
+      .on('start', dragStarted)
+      .on('drag', dragged)
+      .on('end', dragEnded)
+    );
+
+  nodesEnter.append('circle').attr('class', 'node-circle');
+  nodesEnter.append('text').attr('class', 'node-label');
+  nodesEnter.append('text').attr('class', 'node-tags-label');
+
+  const allNodes = nodeGroup.selectAll('.node-group');
+  allNodes.select('.node-circle')
+    .attr('r', d => getNodeRadius(d))
+    .attr('fill', d => getNodeColor(d) + '30')
+    .attr('stroke', d => getNodeColor(d));
+  const showNodeLabels = document.getElementById('show-node-labels').checked;
+  allNodes.select('.node-label')
+    .text(d => showNodeLabels ? d.name : '')
+    .attr('dy', d => -getNodeRadius(d) - 6);
+  allNodes.select('.node-tags-label')
+    .text(d => {
+      if (!showNodeLabels) return '';
+      const tags = [];
+      if (d.familiarity && d.id !== 'me') tags.push(d.familiarity);
+      if (d.tags) tags.push(...d.tags.slice(0, 2));
+      return tags.join(' · ');
+    })
+    .attr('dy', d => getNodeRadius(d) + 14);
+  allNodes.classed('selected', d => d.id === selectedNodeId);
+
+  // Update simulation
+  simulation.nodes(filteredNodes);
+  simulation.force('link').links(filteredEdges);
+  simulation.alpha(0.3).restart();
+
+  // Update stats
+  document.getElementById('stat-nodes').textContent = data.nodes.length;
+  document.getElementById('stat-edges').textContent = data.edges.length;
+  document.getElementById('stat-groups').textContent = countGroups();
+
+  // Update filters and legend
+  updateRelationFilter();
+  updateFamiliarityFilter();
+  renderLegend();
+  if (typeof refreshBatchSelects === 'function') refreshBatchSelects();
+
+  saveData();
+}
+
+function countGroups() {
+  // Simple connected components count
+  const visited = new Set();
+  let groups = 0;
+  const adj = {};
+  data.nodes.forEach(n => { adj[n.id] = []; });
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (adj[sid]) adj[sid].push(tid);
+    if (adj[tid]) adj[tid].push(sid);
+  });
+  data.nodes.forEach(n => {
+    if (!visited.has(n.id)) {
+      groups++;
+      const stack = [n.id];
+      while (stack.length) {
+        const curr = stack.pop();
+        if (visited.has(curr)) continue;
+        visited.add(curr);
+        (adj[curr] || []).forEach(nb => { if (!visited.has(nb)) stack.push(nb); });
+      }
+    }
+  });
+  return groups;
+}
+
+function updateRelationFilter() {
+  const select = document.getElementById('filter-relation');
+  const currentVal = select.value;
+  const allRelations = new Set();
+  data.edges.forEach(e => (e.relations || []).forEach(r => allRelations.add(r)));
+  const opts = ['<option value="">全部关系</option>'];
+  [...allRelations].sort().forEach(r => {
+    opts.push(`<option value="${r}" ${r === currentVal ? 'selected' : ''}>${r}</option>`);
+  });
+  select.innerHTML = opts.join('');
+}
+
+function renderLegend() {
+  const legend = document.getElementById('legend');
+  const allFam = getAllChips('familiarity');
+  legend.innerHTML = '<h4>熟悉程度</h4>' + allFam.map(f =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${getFamiliarityColor(f)}"></div> ${f}</div>`
+  ).join('');
+}
+
+// ===== Drag =====
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  if (d.id !== 'me') {  // Keep "me" pinned if dragged, others release
+    d.fx = null;
+    d.fy = null;
+  }
+  saveData();
+}
+
+// ===== Quick Add =====
+function quickAdd() {
+  const nameInput = document.getElementById('add-name');
+  const name = nameInput.value.trim();
+  if (!name) { toast('请输入姓名'); return; }
+
+  // Check duplicate
+  if (data.nodes.find(n => n.name === name)) {
+    toast('已存在同名人物'); return;
+  }
+
+  // Get familiarity
+  const famChip = document.querySelector('#familiarity-chips .chip.selected');
+  const familiarity = famChip ? famChip.dataset.val : '一般';
+
+  // Get contacts
+  const contacts = [...document.querySelectorAll('#contact-chips .chip.selected')].map(c => c.dataset.val);
+
+  // Get relations
+  const relations = [...document.querySelectorAll('#relation-chips .chip.selected')].map(c => c.dataset.val);
+
+  // Get info tags
+  const tags = [...document.querySelectorAll('#info-chips .chip.selected')].map(c => c.dataset.val);
+
+  const nodeId = genId();
+  const targetId = connectTarget || 'me';
+  const isConnectToMe = targetId === 'me';
+
+  // Create node: if connecting to someone else, I don't know this person → unknown
+  data.nodes.push({
+    id: nodeId,
+    name: name,
+    familiarity: isConnectToMe ? familiarity : 'unknown',
+    contacts: contacts,
+    tags: tags
+  });
+
+  // Create edge: familiarity on the edge = selected value when not connecting to me
+  if (relations.length === 0) relations.push('认识');
+  const edgeObj = {
+    id: genEdgeId(),
+    source: targetId,
+    target: nodeId,
+    relations: relations
+  };
+  if (!isConnectToMe) edgeObj.familiarity = familiarity;
+  data.edges.push(edgeObj);
+
+  // Auto-connect via transitivity
+  const autoCount = applyTransitivity(nodeId, targetId, relations);
+
+  render();
+  const autoMsg = autoCount > 0 ? `，传递性自动连接 ${autoCount} 人` : '';
+  toast(`已添加 ${name}${autoMsg}`);
+
+  // Reset form
+  nameInput.value = '';
+  document.getElementById('connect-to').value = '';
+  connectTarget = null;
+  document.querySelectorAll('#contact-chips .chip, #relation-chips .chip, #info-chips .chip').forEach(c => c.classList.remove('selected'));
+  nameInput.focus();
+}
+
+// ===== Connect Existing =====
+// ===== Connect Existing - relation chips =====
+function renderConnectRelationChips() {
+  const container = document.getElementById('connect-relation-chips');
+  const allRels = getAllChips('relations');
+  container.innerHTML = allRels.map(val => {
+    const transClass = isTransitive(val) ? ' transitive' : '';
+    const transIcon = isTransitive(val) ? '<span class="trans-icon">⇌</span>' : '';
+    return `<div class="chip${transClass}" data-val="${val}">${val}${transIcon}</div>`;
+  }).join('');
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+}
+renderConnectRelationChips();
+
+// ===== Connect Existing - autocomplete =====
+let connectAId = null, connectBId = null;
+
+function setupAutocomplete(inputId, resultsId, setFn) {
+  const input = document.getElementById(inputId);
+  const results = document.getElementById(resultsId);
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { results.classList.remove('show'); setFn(null); return; }
+    const matches = data.nodes.filter(n => n.name.toLowerCase().includes(q)).slice(0, 8);
+    if (matches.length === 0) { results.classList.remove('show'); return; }
+    results.innerHTML = matches.map(n =>
+      `<div class="autocomplete-item" data-id="${n.id}" data-name="${n.name}">${n.name}<span class="ac-sub">${n.familiarity || ''}</span></div>`
+    ).join('');
+    results.classList.add('show');
+    results.querySelectorAll('.autocomplete-item').forEach(item => {
+      item.addEventListener('click', () => {
+        input.value = item.dataset.name;
+        setFn(item.dataset.id);
+        results.classList.remove('show');
+      });
+    });
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => results.classList.remove('show'), 150);
+  });
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) input.dispatchEvent(new Event('input'));
+  });
+}
+
+setupAutocomplete('connect-a', 'connect-a-results', id => { connectAId = id; });
+setupAutocomplete('connect-b', 'connect-b-results', id => { connectBId = id; });
+
+// ===== Batch Connect =====
+let batchPersonId = null;
+setupAutocomplete('batch-person', 'batch-person-results', id => { batchPersonId = id; });
+
+function refreshBatchSelects() {
+  // Match tag: all relation tags + info tags used on nodes
+  const allTags = new Set();
+  data.edges.forEach(e => (e.relations || []).forEach(r => allTags.add(r)));
+  data.nodes.forEach(n => (n.tags || []).forEach(t => allTags.add(t)));
+  const tagOpts = [...allTags].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('batch-match-tag').innerHTML = tagOpts;
+
+  // Relation tag
+  const relOpts = getAllChips('relations').map(r => `<option value="${r}">${r}</option>`).join('');
+  document.getElementById('batch-rel-tag').innerHTML = relOpts;
+
+  // Edge familiarity
+  const famOpts = getAllChips('familiarity').map(f => `<option value="${f}" ${f === 'unknown' ? 'selected' : ''}>${f}</option>`).join('');
+  document.getElementById('batch-edge-fam').innerHTML = famOpts;
+}
+refreshBatchSelects();
+
+function batchConnect() {
+  const personName = document.getElementById('batch-person').value.trim();
+  const person = batchPersonId ? data.nodes.find(n => n.id === batchPersonId) : data.nodes.find(n => n.name === personName);
+  if (!person) { toast('请选择人物'); return; }
+
+  const matchTag = document.getElementById('batch-match-tag').value;
+  const relTag = document.getElementById('batch-rel-tag').value;
+  const edgeFam = document.getElementById('batch-edge-fam').value;
+  if (!matchTag || !relTag) { toast('请选择标签'); return; }
+
+  // Find all nodes that have this tag (via node tags or edge relations)
+  const matchedIds = new Set();
+  data.nodes.forEach(n => {
+    if (n.id === person.id) return;
+    if ((n.tags || []).includes(matchTag)) matchedIds.add(n.id);
+  });
+  data.edges.forEach(e => {
+    if (!(e.relations || []).includes(matchTag)) return;
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (sid !== person.id) matchedIds.add(sid);
+    if (tid !== person.id) matchedIds.add(tid);
+  });
+
+  if (matchedIds.size === 0) { toast(`没有找到含「${matchTag}」的人`); return; }
+
+  let count = 0;
+  matchedIds.forEach(targetId => {
+    // Check existing edge
+    const existing = data.edges.find(e => {
+      const sid = typeof e.source === 'object' ? e.source.id : e.source;
+      const tid = typeof e.target === 'object' ? e.target.id : e.target;
+      return (sid === person.id && tid === targetId) || (sid === targetId && tid === person.id);
+    });
+    if (existing) {
+      if (!existing.relations.includes(relTag)) {
+        existing.relations.push(relTag);
+        count++;
+      }
+    } else {
+      data.edges.push({
+        id: genEdgeId(),
+        source: person.id,
+        target: targetId,
+        relations: [relTag],
+        familiarity: edgeFam
+      });
+      count++;
+    }
+  });
+
+  render();
+  toast(`已将 ${person.name} 与 ${count} 人建立「${relTag}」关系`);
+  document.getElementById('batch-person').value = '';
+  batchPersonId = null;
+}
+
+function connectExisting() {
+  const nameA = document.getElementById('connect-a').value.trim();
+  const nameB = document.getElementById('connect-b').value.trim();
+
+  // Resolve by stored id or by name search
+  const nodeA = connectAId ? data.nodes.find(n => n.id === connectAId) : data.nodes.find(n => n.name === nameA);
+  const nodeB = connectBId ? data.nodes.find(n => n.id === connectBId) : data.nodes.find(n => n.name === nameB);
+
+  if (!nodeA) { toast(`找不到 "${nameA}"`); return; }
+  if (!nodeB) { toast(`找不到 "${nameB}"`); return; }
+  if (nodeA.id === nodeB.id) { toast('不能连接自己'); return; }
+
+  // Collect selected relation chips
+  const relations = [...document.querySelectorAll('#connect-relation-chips .chip.selected')].map(c => c.dataset.val);
+  if (relations.length === 0) { toast('请选择至少一个关系'); return; }
+
+  // Check existing edge
+  const existing = data.edges.find(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return (sid === nodeA.id && tid === nodeB.id) || (sid === nodeB.id && tid === nodeA.id);
+  });
+
+  if (existing) {
+    let added = 0;
+    relations.forEach(r => {
+      if (!existing.relations.includes(r)) { existing.relations.push(r); added++; }
+    });
+    if (added > 0) {
+      render();
+      toast(`已为 ${nodeA.name} 和 ${nodeB.name} 添加 ${added} 个关系`);
+    } else {
+      toast('这些关系已存在');
+    }
+    return;
+  }
+
+  data.edges.push({
+    id: genEdgeId(),
+    source: nodeA.id,
+    target: nodeB.id,
+    relations: relations
+  });
+
+  // Auto-connect via transitivity (both directions)
+  const auto1 = applyTransitivity(nodeA.id, nodeB.id, relations);
+  const auto2 = applyTransitivity(nodeB.id, nodeA.id, relations);
+  const autoTotal = auto1 + auto2;
+
+  render();
+  const autoMsg = autoTotal > 0 ? `，传递性自动连接 ${autoTotal} 条` : '';
+  toast(`已连接 ${nodeA.name} 和 ${nodeB.name}${autoMsg}`);
+  document.getElementById('connect-a').value = '';
+  document.getElementById('connect-b').value = '';
+  connectAId = null;
+  connectBId = null;
+  document.querySelectorAll('#connect-relation-chips .chip').forEach(c => c.classList.remove('selected'));
+}
+
+// ===== Selection =====
+function selectNode(d) {
+  selectedNodeId = selectedNodeId === d.id ? null : d.id;
+  selectedEdgeId = null;
+  render();
+  if (selectedNodeId) showNodeDetail(d);
+  else closeDetail();
+}
+
+function selectEdge(d) {
+  selectedEdgeId = selectedEdgeId === d.id ? null : d.id;
+  selectedNodeId = null;
+  render();
+  if (selectedEdgeId) showEdgeDetail(d);
+  else closeDetail();
+}
+
+// ===== Node Detail Panel =====
+function showNodeDetail(d) {
+  const panel = document.getElementById('detail-panel');
+  const nodeData = data.nodes.find(n => n.id === d.id);
+  if (!nodeData) return;
+
+  const isMe = d.id === 'me';
+  const connections = data.edges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return sid === d.id || tid === d.id;
+  });
+
+  let html = `
+    <h2>
+      <span>${nodeData.name}</span>
+      <button class="close-btn" onclick="closeDetail()">&times;</button>
+    </h2>
+  `;
+
+  if (!isMe) {
+    html += `
+      <label>姓名</label>
+      <input type="text" value="${nodeData.name}" onchange="updateNodeName('${d.id}', this.value)">
+      <label>熟悉程度</label>
+      <select onchange="updateNodeFamiliarity('${d.id}', this.value)">
+        ${getAllChips('familiarity').map(f =>
+          `<option ${nodeData.familiarity === f ? 'selected' : ''}>${f}</option>`
+        ).join('')}
+      </select>
+    `;
+  }
+
+  // Contacts
+  html += `<label>联系方式</label><div class="tag-container">`;
+  (nodeData.contacts || []).forEach(c => {
+    html += `<div class="tag tag-contact">${c} <span class="remove-tag" onclick="removeContact('${d.id}','${c}')">&times;</span></div>`;
+  });
+  html += `</div>
+    <div class="tag-input-row" style="margin-top:6px">
+      <select id="detail-contact-select">
+        ${getAllChips('contacts').map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <button class="small" onclick="addContact('${d.id}')">添加</button>
+    </div>`;
+
+  // Tags
+  html += `<label>标签</label><div class="tag-container">`;
+  (nodeData.tags || []).forEach(t => {
+    html += `<div class="tag tag-info">${t} <span class="remove-tag" onclick="removeTag('${d.id}','${t}')">&times;</span></div>`;
+  });
+  html += `</div>
+    <div class="tag-input-row" style="margin-top:6px">
+      <input type="text" id="detail-tag-input" placeholder="新标签..." onkeydown="if(event.key==='Enter'){addTag('${d.id}')}">
+      <button class="small" onclick="addTag('${d.id}')">添加</button>
+    </div>`;
+
+  // Connections list
+  html += `<label>关系 (${connections.length})</label><div style="margin-top:8px">`;
+  connections.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    const otherId = sid === d.id ? tid : sid;
+    const other = data.nodes.find(n => n.id === otherId);
+    if (other) {
+      html += `<div class="search-result" onclick="focusNode('${otherId}')">
+        <span>${other.name}</span>
+        <span class="sr-tags">${(e.relations || []).join(', ')}</span>
+      </div>`;
+    }
+  });
+  html += `</div>`;
+
+  if (!isMe) {
+    html += `<button class="danger full" onclick="deleteNode('${d.id}')">删除此人</button>`;
+  }
+
+  document.getElementById('detail-content').innerHTML = html;
+  panel.classList.add('open');
+}
+
+function showEdgeDetail(d) {
+  const panel = document.getElementById('detail-panel');
+  const edgeData = data.edges.find(e => e.id === d.id);
+  if (!edgeData) return;
+
+  const sid = typeof d.source === 'object' ? d.source.id : d.source;
+  const tid = typeof d.target === 'object' ? d.target.id : d.target;
+  const sourceNode = data.nodes.find(n => n.id === sid);
+  const targetNode = data.nodes.find(n => n.id === tid);
+
+  const currentFam = getEdgeFamiliarity(edgeData);
+  let html = `
+    <h2>
+      <span>${sourceNode?.name || '?'} — ${targetNode?.name || '?'}</span>
+      <button class="close-btn" onclick="closeDetail()">&times;</button>
+    </h2>
+    <label>熟悉程度</label>
+    <select onchange="updateEdgeFamiliarity('${d.id}', this.value)">
+      ${getAllChips('familiarity').map(f =>
+        `<option ${currentFam === f ? 'selected' : ''}>${f}</option>`
+      ).join('')}
+    </select>
+    <label>关系标签</label>
+    <div class="tag-container">
+  `;
+  (edgeData.relations || []).forEach(r => {
+    html += `<div class="tag tag-relation">${r} <span class="remove-tag" onclick="removeRelation('${d.id}','${r}')">&times;</span></div>`;
+  });
+  html += `</div>
+    <div class="tag-input-row" style="margin-top:6px">
+      <input type="text" id="detail-relation-input" placeholder="新关系..." onkeydown="if(event.key==='Enter'){addRelation('${d.id}')}">
+      <button class="small" onclick="addRelation('${d.id}')">添加</button>
+    </div>
+    <button class="danger full" onclick="deleteEdge('${d.id}')">删除此关系</button>
+  `;
+
+  document.getElementById('detail-content').innerHTML = html;
+  panel.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  selectedNodeId = null;
+  selectedEdgeId = null;
+  render();
+}
+
+// ===== Node/Edge Operations =====
+function updateNodeName(id, name) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) { node.name = name.trim(); render(); }
+}
+function updateNodeFamiliarity(id, val) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) { node.familiarity = val; render(); }
+}
+function addContact(id) {
+  const node = data.nodes.find(n => n.id === id);
+  const val = document.getElementById('detail-contact-select').value;
+  if (node && !node.contacts.includes(val)) {
+    node.contacts.push(val);
+    render();
+    showNodeDetail(node);
+  }
+}
+function removeContact(id, contact) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) {
+    node.contacts = node.contacts.filter(c => c !== contact);
+    render();
+    showNodeDetail(node);
+  }
+}
+function addTag(id) {
+  const input = document.getElementById('detail-tag-input');
+  const val = input.value.trim();
+  const node = data.nodes.find(n => n.id === id);
+  if (node && val && !node.tags.includes(val)) {
+    node.tags = node.tags || [];
+    node.tags.push(val);
+    input.value = '';
+    render();
+    showNodeDetail(node);
+  }
+}
+function removeTag(id, tag) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) {
+    node.tags = (node.tags || []).filter(t => t !== tag);
+    render();
+    showNodeDetail(node);
+  }
+}
+function updateEdgeFamiliarity(edgeId, val) {
+  const edge = data.edges.find(e => e.id === edgeId);
+  if (edge) { edge.familiarity = val; render(); }
+}
+function addRelation(edgeId) {
+  const input = document.getElementById('detail-relation-input');
+  const val = input.value.trim();
+  const edge = data.edges.find(e => e.id === edgeId);
+  if (edge && val && !edge.relations.includes(val)) {
+    edge.relations.push(val);
+    input.value = '';
+    render();
+    showEdgeDetail(edge);
+  }
+}
+function removeRelation(edgeId, rel) {
+  const edge = data.edges.find(e => e.id === edgeId);
+  if (edge) {
+    edge.relations = edge.relations.filter(r => r !== rel);
+    render();
+    showEdgeDetail(edge);
+  }
+}
+
+function deleteNode(id) {
+  if (id === 'me') return;
+  data.nodes = data.nodes.filter(n => n.id !== id);
+  data.edges = data.edges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return sid !== id && tid !== id;
+  });
+  closeDetail();
+  render();
+  toast('已删除');
+}
+
+function deleteEdge(id) {
+  data.edges = data.edges.filter(e => e.id !== id);
+  closeDetail();
+  render();
+  toast('已删除关系');
+}
+
+function focusNode(id) {
+  const node = simulation.nodes().find(n => n.id === id);
+  if (node) {
+    const svgEl = document.getElementById('graph-svg');
+    const w = svgEl.clientWidth;
+    const h = svgEl.clientHeight;
+    svg.transition().duration(500).call(
+      zoom.transform,
+      d3.zoomIdentity.translate(w/2 - node.x * 0.8, h/2 - node.y * 0.8).scale(0.8)
+    );
+    selectedNodeId = id;
+    render();
+    const nodeData = data.nodes.find(n => n.id === id);
+    if (nodeData) showNodeDetail(nodeData);
+  }
+}
+
+// ===== Context Menu =====
+function showNodeContextMenu(event, d) {
+  hideContextMenu();
+  const menu = document.getElementById('context-menu');
+  const isMe = d.id === 'me';
+  let items = `
+    <div class="menu-item" onclick="startConnectFrom('${d.id}')">🔗 从此人连接...</div>
+    <div class="menu-item" onclick="pinNode('${d.id}')">📌 ${d.fx !== null && d.fx !== undefined ? '取消固定' : '固定位置'}</div>
+  `;
+  if (!isMe) {
+    items += `
+      <div class="separator"></div>
+      <div class="menu-item danger" onclick="deleteNode('${d.id}')">🗑 删除</div>
+    `;
+  }
+  menu.innerHTML = items;
+  menu.style.left = event.pageX + 'px';
+  menu.style.top = event.pageY + 'px';
+  menu.style.display = 'block';
+}
+
+function showEdgeContextMenu(event, d) {
+  hideContextMenu();
+  const menu = document.getElementById('context-menu');
+  menu.innerHTML = `
+    <div class="menu-item" onclick="selectEdge(data.edges.find(e=>e.id==='${d.id}'))">✏️ 编辑关系</div>
+    <div class="separator"></div>
+    <div class="menu-item danger" onclick="deleteEdge('${d.id}')">🗑 删除关系</div>
+  `;
+  menu.style.left = event.pageX + 'px';
+  menu.style.top = event.pageY + 'px';
+  menu.style.display = 'block';
+}
+
+function hideContextMenu() {
+  document.getElementById('context-menu').style.display = 'none';
+}
+
+document.addEventListener('click', hideContextMenu);
+
+function pinNode(id) {
+  hideContextMenu();
+  const simNode = simulation.nodes().find(n => n.id === id);
+  if (simNode) {
+    if (simNode.fx !== null && simNode.fx !== undefined) {
+      simNode.fx = null;
+      simNode.fy = null;
+    } else {
+      simNode.fx = simNode.x;
+      simNode.fy = simNode.y;
+    }
+    saveData();
+  }
+}
+
+let connectFromId = null;
+function startConnectFrom(id) {
+  hideContextMenu();
+  connectFromId = id;
+  const node = data.nodes.find(n => n.id === id);
+  toast(`选择要连接的目标节点 (从 ${node?.name} 出发)`);
+  svg.on('click.connect', null);
+  nodeGroup.selectAll('.node-group').on('click.connect', (event, d) => {
+    event.stopPropagation();
+    if (d.id === connectFromId) return;
+    showConnectModal(connectFromId, d.id);
+    nodeGroup.selectAll('.node-group').on('click.connect', null);
+    connectFromId = null;
+  });
+}
+
+function showConnectModal(fromId, toId) {
+  const fromNode = data.nodes.find(n => n.id === fromId);
+  const toNode = data.nodes.find(n => n.id === toId);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>建立连接</h2>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:12px">${fromNode?.name} → ${toNode?.name}</p>
+      <label>关系</label>
+      <input type="text" id="modal-relation" placeholder="例如: 同学, 同事..." autofocus>
+      <div class="modal-actions">
+        <button onclick="this.closest('.modal-overlay').remove()">取消</button>
+        <button class="primary" onclick="confirmConnect('${fromId}','${toId}')">确定</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('input').focus();
+  overlay.querySelector('input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmConnect(fromId, toId);
+  });
+}
+
+function confirmConnect(fromId, toId) {
+  const input = document.getElementById('modal-relation');
+  const relation = input ? input.value.trim() : '认识';
+
+  // Check existing
+  const existing = data.edges.find(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return (sid === fromId && tid === toId) || (sid === toId && tid === fromId);
+  });
+
+  const finalRel = relation || '认识';
+  if (existing) {
+    if (!existing.relations.includes(finalRel)) {
+      existing.relations.push(finalRel);
+    }
+  } else {
+    data.edges.push({
+      id: genEdgeId(),
+      source: fromId,
+      target: toId,
+      relations: [finalRel]
+    });
+  }
+
+  // Auto-connect via transitivity
+  const auto1 = applyTransitivity(fromId, toId, [finalRel]);
+  const auto2 = applyTransitivity(toId, fromId, [finalRel]);
+  const autoTotal = auto1 + auto2;
+
+  document.querySelector('.modal-overlay')?.remove();
+  render();
+  const autoMsg = autoTotal > 0 ? `，传递性自动连接 ${autoTotal} 条` : '';
+  toast(`已建立连接${autoMsg}`);
+}
+
+// ===== Tooltip =====
+function showTooltip(event, d) {
+  const tt = document.getElementById('tooltip');
+  const node = data.nodes.find(n => n.id === d.id);
+  if (!node) return;
+
+  let tagsHtml = '';
+  if (node.familiarity) {
+    const fc = getFamiliarityColor(node.familiarity);
+    tagsHtml += `<div class="tag" style="background:${fc}20;border-color:${fc}50;color:${fc}">${node.familiarity}</div>`;
+  }
+  (node.contacts || []).forEach(c => {
+    tagsHtml += `<div class="tag tag-contact">${c}</div>`;
+  });
+  (node.tags || []).forEach(t => {
+    tagsHtml += `<div class="tag tag-info">${t}</div>`;
+  });
+
+  const edgeCount = data.edges.filter(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    return sid === d.id || tid === d.id;
+  }).length;
+
+  tt.innerHTML = `
+    <div class="tt-name">${node.name}</div>
+    <div class="tt-tags">${tagsHtml}</div>
+    <div style="margin-top:6px;color:var(--text2);font-size:11px">${edgeCount} 个连接</div>
+  `;
+  tt.style.left = (event.pageX + 15) + 'px';
+  tt.style.top = (event.pageY + 15) + 'px';
+  tt.style.display = 'block';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ===== Search / Autocomplete =====
+function setupSearch(inputId, callback) {
+  const input = document.getElementById(inputId);
+  input.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    if (!query) {
+      if (inputId === 'connect-to') {
+        connectTarget = null;
+        document.getElementById('search-results').innerHTML = '';
+      }
+      return;
+    }
+    const matches = data.nodes.filter(n => n.name.toLowerCase().includes(query)).slice(0, 8);
+    if (inputId === 'connect-to') {
+      const resultsDiv = document.getElementById('search-results');
+      resultsDiv.innerHTML = matches.map(n =>
+        `<div class="search-result" data-id="${n.id}" onclick="selectSearchResult('${n.id}','${n.name}')">${n.name} <span class="sr-tags">${n.familiarity || ''}</span></div>`
+      ).join('');
+    }
+    if (callback) callback(matches);
+  });
+}
+
+function selectSearchResult(id, name) {
+  connectTarget = id;
+  document.getElementById('connect-to').value = name;
+  document.getElementById('search-results').innerHTML = '';
+}
+
+// ===== Dynamic Chip Groups =====
+function renderChipGroup(category, containerId, isMulti) {
+  const container = document.getElementById(containerId);
+  const allOptions = getAllChips(category);
+  const defaults = DEFAULT_CHIPS[category];
+
+  let html = allOptions.map(val => {
+    const isCustom = !defaults.includes(val);
+    const defaultSelected = (!isMulti && val === '一般' && category === 'familiarity') ? ' selected' : '';
+    const transClass = (category === 'relations' && isTransitive(val)) ? ' transitive' : '';
+    const transIcon = (category === 'relations' && isTransitive(val)) ? '<span class="trans-icon">⇌</span>' : '';
+    return `<div class="chip${defaultSelected}${transClass}" data-val="${val}" data-category="${category}">
+      ${val}${transIcon}${isCustom ? `<span class="chip-del" onclick="event.stopPropagation();removeChipOption('${category}','${containerId}',${isMulti},'${val}')">&times;</span>` : ''}
+    </div>`;
+  }).join('');
+
+  html += `<div class="chip-add-row">
+    <input type="text" id="add-chip-${category}" placeholder="添加新选项..." onkeydown="if(event.key==='Enter'){addChipOption('${category}','${containerId}',${isMulti})}">
+    <button onclick="addChipOption('${category}','${containerId}',${isMulti})">+</button>
+  </div>`;
+
+  container.innerHTML = html;
+  bindChipEvents(containerId, isMulti);
+}
+
+function bindChipEvents(containerId, isMulti) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (isMulti) {
+        chip.classList.toggle('selected');
+      } else {
+        container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      }
+    });
+    // Right-click on relation chips to toggle transitivity
+    if (chip.dataset.category === 'relations') {
+      chip.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = chip.dataset.val;
+        toggleTransitive(val);
+        // Apply full closure on existing data when turning ON
+        let autoMsg = '';
+        if (isTransitive(val)) {
+          const added = applyFullTransitiveClosure(val);
+          if (added > 0) {
+            render();
+            autoMsg = `，自动补全 ${added} 条连接`;
+          }
+        }
+        // Re-render preserving selections
+        const selectedVals = [...container.querySelectorAll('.chip.selected')].map(c => c.dataset.val);
+        renderChipGroup('relations', containerId, isMulti);
+        container.querySelectorAll('.chip').forEach(c => {
+          if (selectedVals.includes(c.dataset.val)) c.classList.add('selected');
+        });
+        renderConnectRelationChips();
+        const action = isTransitive(val) ? '开启' : '关闭';
+        toast(`${val}: 传递性已${action}${autoMsg}`);
+      });
+    }
+  });
+}
+
+function addChipOption(category, containerId, isMulti) {
+  const input = document.getElementById(`add-chip-${category}`);
+  const val = input.value.trim();
+  if (!val) return;
+  const all = getAllChips(category);
+  if (all.includes(val)) { toast(`"${val}" 已存在`); return; }
+  userChips[category] = userChips[category] || [];
+  userChips[category].push(val);
+  saveCustomChips();
+  // Re-render chip group, preserving current selections
+  const selectedVals = [...document.querySelectorAll(`#${containerId} .chip.selected`)].map(c => c.dataset.val);
+  renderChipGroup(category, containerId, isMulti);
+  // Restore selections
+  document.querySelectorAll(`#${containerId} .chip`).forEach(c => {
+    if (selectedVals.includes(c.dataset.val)) c.classList.add('selected');
+  });
+  updateFamiliarityFilter();
+  if (category === 'relations') renderConnectRelationChips();
+  toast(`已添加 "${val}"`);
+}
+
+function removeChipOption(category, containerId, isMulti, val) {
+  userChips[category] = (userChips[category] || []).filter(v => v !== val);
+  saveCustomChips();
+  const selectedVals = [...document.querySelectorAll(`#${containerId} .chip.selected`)].map(c => c.dataset.val).filter(v => v !== val);
+  renderChipGroup(category, containerId, isMulti);
+  document.querySelectorAll(`#${containerId} .chip`).forEach(c => {
+    if (selectedVals.includes(c.dataset.val)) c.classList.add('selected');
+  });
+  updateFamiliarityFilter();
+  if (category === 'relations') renderConnectRelationChips();
+  toast(`已移除 "${val}"`);
+}
+
+function updateFamiliarityFilter() {
+  const select = document.getElementById('filter-familiarity');
+  const currentVal = select.value;
+  const allFam = getAllChips('familiarity');
+  select.innerHTML = '<option value="">全部熟悉度</option>' +
+    allFam.map(f => `<option value="${f}" ${f === currentVal ? 'selected' : ''}>${f}</option>`).join('');
+}
+
+// Init chip groups
+renderChipGroup('familiarity', 'familiarity-chips', false);
+renderChipGroup('contacts', 'contact-chips', true);
+renderChipGroup('relations', 'relation-chips', true);
+renderChipGroup('info', 'info-chips', true);
+updateFamiliarityFilter();
+
+// ===== Filter =====
+function applyFilter() { render(); }
+function toggleLabel() { render(); }
+
+// ===== Tools =====
+function exportData() {
+  saveData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `social-graph-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('已导出');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.nodes && imported.edges) {
+        data = imported;
+        saveData();
+        render();
+        centerView();
+        toast('已导入');
+      } else {
+        toast('无效的数据格式');
+      }
+    } catch(err) {
+      toast('解析失败');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function resetLayout() {
+  data.nodes.forEach(n => { n.x = undefined; n.y = undefined; });
+  simulation.nodes().forEach(n => { n.fx = null; n.fy = null; n.x = (Math.random()-0.5)*300; n.y = (Math.random()-0.5)*300; });
+  const me = simulation.nodes().find(n => n.id === 'me');
+  if (me) { me.x = 0; me.y = 0; }
+  simulation.alpha(1).restart();
+  centerView();
+  toast('布局已重置');
+}
+
+function showUnknownPanel() {
+  const unknownNodes = data.nodes.filter(n => n.id !== 'me' && (n.familiarity === 'unknown' || !n.familiarity));
+  const unknownEdges = data.edges.filter(e => {
+    const fam = getEdgeFamiliarity(e);
+    return fam === 'unknown' || !fam;
+  });
+
+  const famOptionsForNode = getAllChips('familiarity').map(f => `<option value="${f}" ${f === 'unknown' ? 'selected' : ''}>${f}</option>`).join('');
+  const famOptionsForEdge = getAllChips('familiarity').map(f => `<option value="${f}" ${f === 'unknown' ? 'selected' : ''}>${f}</option>`).join('');
+
+  let html = '<div class="modal" style="width:520px"><h2 style="display:flex;justify-content:space-between;align-items:center">Unknown 管理 <button class="close-btn" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></h2>';
+
+  if (unknownNodes.length + unknownEdges.length > 0) {
+    // Collect all relation tags on unknown edges
+    const allTags = new Set();
+    unknownEdges.forEach(e => (e.relations || []).forEach(r => allTags.add(r)));
+    // Also collect node info tags and relation tags from edges touching unknown nodes
+    unknownNodes.forEach(n => {
+      (n.tags || []).forEach(t => allTags.add(t));
+      data.edges.forEach(e => {
+        const sid = typeof e.source === 'object' ? e.source.id : e.source;
+        const tid = typeof e.target === 'object' ? e.target.id : e.target;
+        if (sid === n.id || tid === n.id) (e.relations || []).forEach(r => allTags.add(r));
+      });
+    });
+    const tagOptions = [...allTags].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+    const famOpts = getAllChips('familiarity').filter(f => f !== 'unknown').map(f => `<option value="${f}">${f}</option>`).join('');
+
+    html += `<div style="margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="small" onclick="batchSetUnknown('没见过')">全部→没见过</button>
+        <button class="small" onclick="batchSetUnknown('只见过')">全部→只见过</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text2)">含</span>
+        <select id="batch-tag-filter" style="width:auto;min-width:80px;padding:4px 8px;font-size:12px">${tagOptions}</select>
+        <span style="font-size:12px;color:var(--text2)">→</span>
+        <select id="batch-tag-fam" style="width:auto;min-width:80px;padding:4px 8px;font-size:12px">${famOpts}</select>
+        <button class="small primary" onclick="batchSetByTag()">应用</button>
+      </div>
+    </div>`;
+  }
+
+  if (unknownNodes.length === 0 && unknownEdges.length === 0) {
+    html += '<div class="unknown-empty">没有 unknown 条目</div>';
+  } else {
+    if (unknownNodes.length > 0) {
+      html += `<div class="unknown-section-title">节点 (${unknownNodes.length})</div><div class="unknown-list">`;
+      unknownNodes.forEach(n => {
+        html += `<div class="unknown-item">
+          <div class="uk-label">${n.name}</div>
+          <select onchange="updateNodeFamiliarityFromPanel('${n.id}', this.value)">${famOptionsForNode}</select>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    if (unknownEdges.length > 0) {
+      html += `<div class="unknown-section-title">边 (${unknownEdges.length})</div><div class="unknown-list">`;
+      unknownEdges.forEach(e => {
+        const sid = typeof e.source === 'object' ? e.source.id : e.source;
+        const tid = typeof e.target === 'object' ? e.target.id : e.target;
+        const sName = data.nodes.find(n => n.id === sid)?.name || '?';
+        const tName = data.nodes.find(n => n.id === tid)?.name || '?';
+        const rels = (e.relations || []).join(', ');
+        html += `<div class="unknown-item">
+          <div class="uk-label">${sName} — ${tName} <span style="color:var(--text2);font-size:11px">${rels}</span></div>
+          <select onchange="updateEdgeFamiliarityFromPanel('${e.id}', this.value)">${famOptionsForEdge}</select>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  html += '</div>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ===== Proximity (Random Walk with Restart) =====
+const PROXIMITY_WEIGHT = {
+  '密友': 0.90, '熟悉': 0.75, '一般': 0.60,
+  '不太熟': 0.45, '只见过': 0.30, '没见过': 0, 'unknown': 0.15
+};
+
+function getProximityEdgeWeight(e) {
+  const fam = getEdgeFamiliarity(e);
+  if (PROXIMITY_WEIGHT[fam] !== undefined) return PROXIMITY_WEIGHT[fam];
+  return 0.30; // custom familiarity default
+}
+
+function computeProximity(alpha = 0.20) {
+  // Closed-form: prox = α * (I - (1-α) * P^T)^{-1} * s
+  // where P is row-normalized weighted adjacency, s = e_me
+
+  const n = data.nodes.length;
+  const idxMap = {};
+  data.nodes.forEach((node, i) => { idxMap[node.id] = i; });
+  const meIdx = idxMap['me'];
+
+  // Build weighted adjacency and row-normalize to get transition matrix P
+  // P[u][v] = w(u,v) / Σ_k w(u,k)
+  const P = Array.from({ length: n }, () => new Float64Array(n));
+
+  const outSum = new Float64Array(n);
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    const w = getProximityEdgeWeight(e);
+    if (w === 0) return;
+    const si = idxMap[sid], ti = idxMap[tid];
+    if (si === undefined || ti === undefined) return;
+    P[si][ti] += w;
+    P[ti][si] += w;
+    outSum[si] += w;
+    outSum[ti] += w;
+  });
+
+  // Row-normalize P
+  for (let i = 0; i < n; i++) {
+    if (outSum[i] > 0) {
+      for (let j = 0; j < n; j++) P[i][j] /= outSum[i];
+    }
+  }
+
+  // Build A = I - (1-α) * P^T   (n×n)
+  // and b = α * e_me             (n×1)
+  const d = 1 - alpha;
+  const A = Array.from({ length: n }, (_, i) => {
+    const row = new Float64Array(n + 1); // augmented [A | b]
+    for (let j = 0; j < n; j++) {
+      row[j] = (i === j ? 1 : 0) - d * P[j][i]; // P^T[i][j] = P[j][i]
+    }
+    row[n] = (i === meIdx) ? alpha : 0; // b
+    return row;
+  });
+
+  // Gaussian elimination with partial pivoting
+  for (let col = 0; col < n; col++) {
+    // Find pivot
+    let maxVal = Math.abs(A[col][col]), maxRow = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(A[row][col]) > maxVal) { maxVal = Math.abs(A[row][col]); maxRow = row; }
+    }
+    if (maxRow !== col) { const tmp = A[col]; A[col] = A[maxRow]; A[maxRow] = tmp; }
+
+    const pivot = A[col][col];
+    if (Math.abs(pivot) < 1e-12) continue;
+
+    // Eliminate below
+    for (let row = col + 1; row < n; row++) {
+      const factor = A[row][col] / pivot;
+      for (let k = col; k <= n; k++) A[row][k] -= factor * A[col][k];
+    }
+  }
+
+  // Back substitution
+  const x = new Float64Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    let sum = A[i][n];
+    for (let j = i + 1; j < n; j++) sum -= A[i][j] * x[j];
+    x[i] = Math.abs(A[i][i]) > 1e-12 ? sum / A[i][i] : 0;
+  }
+
+  // Map back to node ids
+  const prox = {};
+  data.nodes.forEach((node, i) => { prox[node.id] = Math.max(0, x[i]); });
+  return prox;
+}
+
+function showProximityPanel() {
+  const prox = computeProximity();
+
+  // Sort by proximity descending, exclude "me"
+  const ranked = data.nodes
+    .filter(n => n.id !== 'me')
+    .map(n => ({ ...n, score: prox[n.id] || 0 }))
+    .sort((a, b) => b.score - a.score);
+
+  const maxScore = ranked.length > 0 ? ranked[0].score : 1;
+
+  let html = `<div class="modal" style="width:500px;max-height:80vh">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      Proximity 排行
+      <span>
+        <button class="small" onclick="refreshProximityPanel()" style="margin-right:8px">重新计算</button>
+        <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </span>
+    </h2>
+    <p style="color:var(--text2);font-size:11px;margin-bottom:12px">
+      Random Walk with Restart (α=0.20) · 边权线性衰减 · 没见过=0
+    </p>
+    <div style="max-height:60vh;overflow-y:auto">`;
+
+  if (ranked.length === 0) {
+    html += '<div class="unknown-empty">暂无数据</div>';
+  } else {
+    ranked.forEach((n, i) => {
+      const color = getFamiliarityColor(n.familiarity);
+      const pct = maxScore > 0 ? (n.score / maxScore * 100) : 0;
+      const scoreStr = (n.score * 100).toFixed(3);
+      html += `<div class="prox-item" onclick="this.closest('.modal-overlay').remove();focusNode('${n.id}')">
+        <div class="prox-bar-bg" style="width:${pct}%;background:${color}"></div>
+        <span class="prox-rank">${i + 1}</span>
+        <span class="prox-dot" style="background:${color}"></span>
+        <span class="prox-name">${n.name} <span style="color:var(--text2);font-size:11px">${n.familiarity || ''}</span></span>
+        <span class="prox-score" style="color:${color}">${scoreStr}</span>
+      </div>`;
+    });
+  }
+
+  html += '</div></div>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function refreshProximityPanel() {
+  document.querySelector('.modal-overlay')?.remove();
+  showProximityPanel();
+}
+
+// ===== Relation Path Panel =====
+function findShortestPath(fromId, toId) {
+  // BFS on undirected graph
+  const adj = {};
+  data.nodes.forEach(n => { adj[n.id] = []; });
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    adj[sid].push({ neighbor: tid, edge: e });
+    adj[tid].push({ neighbor: sid, edge: e });
+  });
+  const visited = new Set([fromId]);
+  const prev = {}; // nodeId -> { from: nodeId, edge }
+  const queue = [fromId];
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    if (cur === toId) break;
+    for (const { neighbor, edge } of (adj[cur] || [])) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        prev[neighbor] = { from: cur, edge };
+        queue.push(neighbor);
+      }
+    }
+  }
+  if (!prev[toId] && fromId !== toId) return null; // no path
+  if (fromId === toId) return { nodes: [fromId], edges: [] };
+  const pathNodes = [];
+  const pathEdges = [];
+  let cur = toId;
+  while (cur !== fromId) {
+    pathNodes.unshift(cur);
+    pathEdges.unshift(prev[cur].edge);
+    cur = prev[cur].from;
+  }
+  pathNodes.unshift(fromId);
+  return { nodes: pathNodes, edges: pathEdges };
+}
+
+let pathAId = null, pathBId = null;
+
+function showRelationPathPanel() {
+  pathAId = null; pathBId = null;
+  let html = `<div class="modal" style="width:560px;max-height:85vh">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      关系路径查询
+      <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+    </h2>
+    <div style="display:flex;gap:12px;margin-bottom:12px">
+      <div style="flex:1;position:relative">
+        <label style="font-size:11px;color:var(--text2)">人物 A</label>
+        <input type="text" id="path-a-input" placeholder="搜索..." autocomplete="off" style="width:100%">
+        <div class="autocomplete-list" id="path-a-results"></div>
+      </div>
+      <div style="flex:1;position:relative">
+        <label style="font-size:11px;color:var(--text2)">人物 B</label>
+        <input type="text" id="path-b-input" placeholder="搜索..." autocomplete="off" style="width:100%">
+        <div class="autocomplete-list" id="path-b-results"></div>
+      </div>
+    </div>
+    <button class="small" onclick="computeRelationPath()" style="margin-bottom:16px">查询</button>
+    <div id="path-result"></div>
+  </div>`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  // Setup autocomplete inside modal
+  setTimeout(() => {
+    setupAutocomplete('path-a-input', 'path-a-results', id => { pathAId = id; });
+    setupAutocomplete('path-b-input', 'path-b-results', id => { pathBId = id; });
+  }, 0);
+}
+
+function computeRelationPath() {
+  const resultDiv = document.getElementById('path-result');
+  if (!pathAId || !pathBId) {
+    resultDiv.innerHTML = '<div style="color:var(--text2);font-size:13px">请先选择两个人物</div>';
+    return;
+  }
+  if (pathAId === pathBId) {
+    resultDiv.innerHTML = '<div style="color:var(--text2);font-size:13px">请选择不同的人物</div>';
+    return;
+  }
+
+  const nodeA = data.nodes.find(n => n.id === pathAId);
+  const nodeB = data.nodes.find(n => n.id === pathBId);
+  if (!nodeA || !nodeB) return;
+
+  let html = '';
+
+  // 1. Shortest path
+  const path = findShortestPath(pathAId, pathBId);
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="font-size:13px;font-weight:600;margin-bottom:8px">最短路径</div>';
+  if (!path) {
+    html += '<div style="color:var(--text2);font-size:13px">无连接路径</div>';
+  } else {
+    html += '<div class="path-vis">';
+    path.nodes.forEach((nid, i) => {
+      const node = data.nodes.find(nd => nd.id === nid);
+      const color = getFamiliarityColor(node?.familiarity);
+      html += `<div class="path-node" onclick="document.querySelector('.modal-overlay')?.remove();focusNode('${nid}')">
+        <div class="path-node-dot" style="background:${color}">${(node?.name || '?')[0]}</div>
+        <div class="path-node-name">${node?.name || nid}</div>
+      </div>`;
+      if (i < path.edges.length) {
+        const edge = path.edges[i];
+        const eFam = getEdgeFamiliarity(edge);
+        const eColor = getFamiliarityColor(eFam);
+        const relLabel = (edge.relations || []).join(', ') || eFam;
+        html += `<div class="path-edge">
+          <div class="path-edge-line" style="background:${eColor}"></div>
+          <div class="path-edge-label">${relLabel}</div>
+        </div>`;
+      }
+    });
+    html += '</div>';
+    html += `<div style="font-size:11px;color:var(--text2)">路径长度: ${path.edges.length} 步</div>`;
+  }
+  html += '</div>';
+
+
+  resultDiv.innerHTML = html;
+}
+
+function batchSetByTag() {
+  const tag = document.getElementById('batch-tag-filter').value;
+  const fam = document.getElementById('batch-tag-fam').value;
+  if (!tag || !fam) return;
+  let count = 0;
+
+  // Nodes: unknown nodes that have this tag, or are connected by an edge with this relation
+  const matchedNodeIds = new Set();
+  data.nodes.forEach(n => {
+    if (n.id === 'me' || (n.familiarity !== 'unknown' && n.familiarity)) return;
+    if ((n.tags || []).includes(tag)) matchedNodeIds.add(n.id);
+  });
+  data.edges.forEach(e => {
+    if (!(e.relations || []).includes(tag)) return;
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    [sid, tid].forEach(id => {
+      const n = data.nodes.find(x => x.id === id);
+      if (n && n.id !== 'me' && (n.familiarity === 'unknown' || !n.familiarity)) matchedNodeIds.add(id);
+    });
+  });
+  matchedNodeIds.forEach(id => {
+    const n = data.nodes.find(x => x.id === id);
+    if (n) { n.familiarity = fam; count++; }
+  });
+
+  // Edges: unknown edges that contain this relation tag
+  data.edges.forEach(e => {
+    const ef = getEdgeFamiliarity(e);
+    if (ef !== 'unknown' && ef) return;
+    if ((e.relations || []).includes(tag)) {
+      e.familiarity = fam; count++;
+    }
+  });
+
+  saveData();
+  render();
+  toast(`已将含「${tag}」的 ${count} 条设为「${fam}」`);
+  setTimeout(refreshUnknownPanel, 50);
+}
+
+function batchSetUnknown(val) {
+  let count = 0;
+  data.nodes.forEach(n => {
+    if (n.id !== 'me' && (n.familiarity === 'unknown' || !n.familiarity)) {
+      n.familiarity = val; count++;
+    }
+  });
+  data.edges.forEach(e => {
+    const fam = getEdgeFamiliarity(e);
+    if (fam === 'unknown' || !fam) {
+      e.familiarity = val; count++;
+    }
+  });
+  saveData();
+  render();
+  toast(`已将 ${count} 条设为「${val}」`);
+  setTimeout(refreshUnknownPanel, 50);
+}
+
+function updateNodeFamiliarityFromPanel(id, val) {
+  if (val === 'unknown') return; // no change
+  const node = data.nodes.find(n => n.id === id);
+  if (node) {
+    node.familiarity = val;
+    saveData();
+    render();
+    setTimeout(refreshUnknownPanel, 50);
+  }
+}
+
+function updateEdgeFamiliarityFromPanel(id, val) {
+  if (val === 'unknown') return; // no change
+  const edge = data.edges.find(e => e.id === id);
+  if (edge) {
+    edge.familiarity = val;
+    // Also sync to simulation copy
+    const simEdge = simulation.force('link').links().find(l => l.id === id);
+    if (simEdge) simEdge.familiarity = val;
+    saveData();
+    render();
+    setTimeout(refreshUnknownPanel, 50);
+  }
+}
+
+function refreshUnknownPanel() {
+  const existing = document.querySelector('.modal-overlay');
+  if (existing) {
+    existing.remove();
+    showUnknownPanel();
+  }
+}
+
+function confirmClear() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>确认清空</h2>
+      <p style="color:var(--text2);font-size:13px">这将删除所有数据，此操作不可撤销。</p>
+      <div class="modal-actions">
+        <button onclick="this.closest('.modal-overlay').remove()">取消</button>
+        <button class="primary danger" onclick="clearData(); this.closest('.modal-overlay').remove()">确认清空</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function clearData() {
+  data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  saveData();
+  render();
+  centerView();
+  closeDetail();
+  toast('数据已清空');
+}
+
+// ===== Sidebar Toggle =====
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('collapsed');
+  const btn = document.getElementById('sidebar-toggle');
+  btn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+// ===== Toast =====
+function toast(msg) {
+  let t = document.querySelector('.toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== Keyboard shortcuts =====
+document.addEventListener('keydown', (e) => {
+  // Enter in add-name to quick add
+  if (e.key === 'Enter' && document.activeElement.id === 'add-name') {
+    quickAdd();
+  }
+  // Escape to close panels
+  if (e.key === 'Escape') {
+    closeDetail();
+    hideContextMenu();
+    document.querySelector('.modal-overlay')?.remove();
+  }
+  // Delete selected node
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !document.activeElement.matches('input,select,textarea')) {
+    if (selectedNodeId && selectedNodeId !== 'me') deleteNode(selectedNodeId);
+    else if (selectedEdgeId) deleteEdge(selectedEdgeId);
+  }
+});
+
+// Click on empty space to deselect
+svg.on('click', () => {
+  if (selectedNodeId || selectedEdgeId) {
+    selectedNodeId = null;
+    selectedEdgeId = null;
+    closeDetail();
+    render();
+  }
+});
+
+// ===== Init =====
+setupSearch('connect-to');
+centerView();
+render();
+
+// Make "me" node centered initially
+setTimeout(() => {
+  const me = simulation.nodes().find(n => n.id === 'me');
+  if (me) { me.fx = 0; me.fy = 0; }
+}, 100);
+</script>
+</body>
+</html>
