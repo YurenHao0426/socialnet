@@ -720,11 +720,11 @@ textarea:focus { border-color:var(--accent); }
         <input type="checkbox" id="show-edge-labels" onchange="toggleLabel()"> 显示边标签
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="show-communities" onchange="toggleCommunityOverlay()"> 社区检测 (Leiden)
+        <input type="checkbox" id="show-communities" checked onchange="toggleCommunityOverlay()"> 社区检测 (Leiden)
       </label>
-      <div id="community-controls" style="display:none;margin-top:6px">
-        <label style="font-size:11px">分辨率 γ <span id="cpm-gamma-val">0.05</span></label>
-        <input type="range" id="cpm-gamma" min="0.01" max="0.5" step="0.01" value="0.05" style="width:100%" oninput="updateCPMGamma(this.value)">
+      <div id="community-controls" style="margin-top:6px">
+        <label style="font-size:11px">分辨率 γ <span id="cpm-gamma-val">0.15</span></label>
+        <input type="range" id="cpm-gamma" min="0.01" max="0.5" step="0.01" value="0.15" style="width:100%" oninput="updateCPMGamma(this.value)">
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="show-groups" checked onchange="render()"> 显示圈子
@@ -3108,7 +3108,7 @@ function toast(msg) {
 
 // ===== Leiden-CPM Community Detection =====
 let communityMap = null;
-let communityEnabled = false;
+let communityEnabled = true;
 const COMMUNITY_COLORS = ['#ef4444','#fb923c','#34d399','#60a5fa','#a78bfa','#f472b6','#38bdf8','#facc15','#2dd4bf','#818cf8','#22d3ee','#fb7185'];
 
 function leidenCPM(gamma = 0.05) {
@@ -3880,6 +3880,7 @@ svg.on('click', () => {
 
 // ===== Init =====
 refreshGraphSelect();
+communityMap = leidenCPM(0.15);
 setupSearch('connect-to');
 centerView();
 render();
