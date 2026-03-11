@@ -853,6 +853,18 @@ const FAMILIARITY_COLORS = {
 };
 const CUSTOM_FAM_COLORS = ['#f472b6','#a78bfa','#38bdf8','#2dd4bf','#facc15','#fb7185','#818cf8','#22d3ee'];
 
+// ===== Multi-Graph Keys (must be before loadCustomChips/loadTransitive/loadData) =====
+let currentGraphId = 'default';
+function loadGraphRegistry() {
+  try { const s = localStorage.getItem('social-graph-registry'); if (s) return JSON.parse(s); } catch(e) {}
+  return [{ id: 'default', name: '我的社交网络' }];
+}
+function saveGraphRegistry() { localStorage.setItem('social-graph-registry', JSON.stringify(graphRegistry)); }
+let graphRegistry = loadGraphRegistry();
+function currentGraphKey() { return 'social-graph-data' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+function currentChipsKey() { return 'social-graph-custom-chips' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+function currentTransitiveKey() { return 'social-graph-transitive' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+
 const DEFAULT_CHIPS = {
   familiarity: ['密友', '熟悉', '一般', '不太熟', '只见过', 'unknown'],
   contacts: ['微信', '电话', '邮箱', 'QQ', '无'],
@@ -1019,24 +1031,6 @@ function updateUndoButtons() {
 }
 
 // ===== Multi-Graph =====
-let currentGraphId = 'default';
-
-function loadGraphRegistry() {
-  try {
-    const s = localStorage.getItem('social-graph-registry');
-    if (s) return JSON.parse(s);
-  } catch(e) {}
-  return [{ id: 'default', name: '我的社交网络' }];
-}
-function saveGraphRegistry() {
-  localStorage.setItem('social-graph-registry', JSON.stringify(graphRegistry));
-}
-let graphRegistry = loadGraphRegistry();
-
-function currentGraphKey() { return 'social-graph-data' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
-function currentChipsKey() { return 'social-graph-custom-chips' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
-function currentTransitiveKey() { return 'social-graph-transitive' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
-
 function refreshGraphSelect() {
   const sel = document.getElementById('graph-select');
   sel.innerHTML = graphRegistry.map(g =>
