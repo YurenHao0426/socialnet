@@ -540,7 +540,7 @@ svg { width: 100%; height: 100%; }
 
 /* ===== Community Hulls ===== */
 .community-hull { fill-opacity: 0.07; stroke-opacity: 0.35; stroke-width: 2; stroke-dasharray: 6 3; pointer-events: none; }
-.community-label { font-size: 11px; fill: var(--text2); text-anchor: middle; pointer-events: none; opacity: 0.7; }
+.community-label { font-size: 18px; font-weight: 700; text-anchor: middle; pointer-events: none; opacity: 0.25; }
 .group-hull { fill-opacity: 0.06; stroke-opacity: 0.5; stroke-width: 2; pointer-events: none; }
 .group-label { font-size: 13px; font-weight: 600; fill-opacity: 0.6; text-anchor: middle; pointer-events: none; }
 
@@ -3266,7 +3266,8 @@ function renderCommunityHulls() {
     .merge(labels)
     .attr('x', d => d3.mean(d.points, p => p[0]))
     .attr('y', d => d3.mean(d.points, p => p[1]) - 20)
-    .text(d => (d.label || '社群' + (d.cid+1)) + ` (${d.members.length})`);
+    .text(d => (d.label || '社群' + (d.cid+1)) + ` (${d.members.length})`)
+    .attr('fill', d => COMMUNITY_COLORS[d.cid % COMMUNITY_COLORS.length]);
 }
 
 // ===== Manual Groups =====
