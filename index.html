@@ -3190,6 +3190,59 @@ function convexHullPadded(points, padding) {
   });
 }
 
+function communityAutoLabel(memberIds, allCommunityGroups) {
+  const memberSet = new Set(memberIds);
+  // Collect all tags for each community: node tags + edge relation tags (internal edges)
+  const tagInternalCount = {};  // tag -> count within this community
+  const tagTotalCount = {};     // tag -> count across all communities
+
+  // Precompute total counts for all tags across all communities
+  const allTagTotal = {};
+  for (const [, members] of Object.entries(allCommunityGroups)) {
+    const mSet = new Set(members);
+    const seen = {};  // tag -> count in this community
+    members.forEach(id => {
+      const node = data.nodes.find(n => n.id === id);
+      if (node) (node.tags || []).forEach(t => { seen[t] = (seen[t] || 0) + 1; });
+    });
+    data.edges.forEach(e => {
+      const s = typeof e.source === 'object' ? e.source.id : e.source;
+      const t = typeof e.target === 'object' ? e.target.id : e.target;
+      if (mSet.has(s) && mSet.has(t)) {
+        (e.relations || []).forEach(r => { seen[r] = (seen[r] || 0) + 1; });
+      }
+    });
+    for (const [t, c] of Object.entries(seen)) {
+      allTagTotal[t] = (allTagTotal[t] || 0) + c;
+    }
+  }
+
+  // Count tags within this community
+  memberIds.forEach(id => {
+    const node = data.nodes.find(n => n.id === id);
+    if (node) (node.tags || []).forEach(t => { tagInternalCount[t] = (tagInternalCount[t] || 0) + 1; });
+  });
+  data.edges.forEach(e => {
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    if (memberSet.has(s) && memberSet.has(t)) {
+      (e.relations || []).forEach(r => { tagInternalCount[r] = (tagInternalCount[r] || 0) + 1; });
+    }
+  });
+
+  // Score = coverage × specificity
+  let bestTag = null, bestScore = -1;
+  const size = memberIds.length;
+  for (const [tag, intCount] of Object.entries(tagInternalCount)) {
+    const coverage = intCount / size;
+    const total = allTagTotal[tag] || intCount;
+    const specificity = intCount / total;
+    const score = coverage * specificity;
+    if (score > bestScore) { bestScore = score; bestTag = tag; }
+  }
+  return bestTag;
+}
+
 function renderCommunityHulls() {
   if (!communityEnabled || !communityMap) { communityHullGroup.selectAll('*').remove(); return; }
   // Group nodes by community
@@ -3200,7 +3253,8 @@ function renderCommunityHulls() {
       const sn = simulation.nodes().find(n => n.id === id);
       return sn ? [sn.x, sn.y] : null;
     }).filter(Boolean);
-    return { cid: parseInt(cid), points, members };
+    const label = communityAutoLabel(members, groups);
+    return { cid: parseInt(cid), points, members, label };
   });
   const hulls = communityHullGroup.selectAll('.community-hull').data(hullData, d => d.cid);
   hulls.exit().remove();
@@ -3216,7 +3270,7 @@ function renderCommunityHulls() {
     .merge(labels)
     .attr('x', d => d3.mean(d.points, p => p[0]))
     .attr('y', d => d3.mean(d.points, p => p[1]) - 20)
-    .text(d => `社群${d.cid+1} (${d.members.length})`);
+    .text(d => (d.label || '社群' + (d.cid+1)) + ` (${d.members.length})`);
 }
 
 // ===== Manual Groups =====
