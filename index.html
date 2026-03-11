@@ -3192,25 +3192,27 @@ function convexHullPadded(points, padding) {
 
 function communityAutoLabel(memberIds, allCommunityGroups) {
   const memberSet = new Set(memberIds);
-  // Collect all tags for each community: node tags + edge relation tags (internal edges)
-  const tagInternalCount = {};  // tag -> count within this community
-  const tagTotalCount = {};     // tag -> count across all communities
+  // Tag sources: node.tags + relations on edges connected to "me"
+  function getNodeTags(id) {
+    const node = data.nodes.find(n => n.id === id);
+    const tags = [...(node?.tags || [])];
+    // Add relation tags from edges connecting this node to "me"
+    data.edges.forEach(e => {
+      const s = typeof e.source === 'object' ? e.source.id : e.source;
+      const t = typeof e.target === 'object' ? e.target.id : e.target;
+      if ((s === 'me' && t === id) || (t === 'me' && s === id)) {
+        (e.relations || []).forEach(r => tags.push(r));
+      }
+    });
+    return tags;
+  }
 
   // Precompute total counts for all tags across all communities
   const allTagTotal = {};
   for (const [, members] of Object.entries(allCommunityGroups)) {
-    const mSet = new Set(members);
-    const seen = {};  // tag -> count in this community
+    const seen = {};
     members.forEach(id => {
-      const node = data.nodes.find(n => n.id === id);
-      if (node) (node.tags || []).forEach(t => { seen[t] = (seen[t] || 0) + 1; });
-    });
-    data.edges.forEach(e => {
-      const s = typeof e.source === 'object' ? e.source.id : e.source;
-      const t = typeof e.target === 'object' ? e.target.id : e.target;
-      if (mSet.has(s) && mSet.has(t)) {
-        (e.relations || []).forEach(r => { seen[r] = (seen[r] || 0) + 1; });
-      }
+      getNodeTags(id).forEach(t => { seen[t] = (seen[t] || 0) + 1; });
     });
     for (const [t, c] of Object.entries(seen)) {
       allTagTotal[t] = (allTagTotal[t] || 0) + c;
@@ -3218,16 +3220,9 @@ function communityAutoLabel(memberIds, allCommunityGroups) {
   }
 
   // Count tags within this community
+  const tagInternalCount = {};
   memberIds.forEach(id => {
-    const node = data.nodes.find(n => n.id === id);
-    if (node) (node.tags || []).forEach(t => { tagInternalCount[t] = (tagInternalCount[t] || 0) + 1; });
-  });
-  data.edges.forEach(e => {
-    const s = typeof e.source === 'object' ? e.source.id : e.source;
-    const t = typeof e.target === 'object' ? e.target.id : e.target;
-    if (memberSet.has(s) && memberSet.has(t)) {
-      (e.relations || []).forEach(r => { tagInternalCount[r] = (tagInternalCount[r] || 0) + 1; });
-    }
+    getNodeTags(id).forEach(t => { tagInternalCount[t] = (tagInternalCount[t] || 0) + 1; });
   });
 
   // Score = coverage × specificity
