@@ -538,6 +538,51 @@ svg { width: 100%; height: 100%; }
 .path-edge-line { width:40px; height:2px; background:var(--border); }
 .path-edge-label { font-size:9px; color:var(--text2); margin-top:2px; max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
+/* ===== Community Hulls ===== */
+.community-hull { fill-opacity: 0.07; stroke-opacity: 0.35; stroke-width: 2; stroke-dasharray: 6 3; pointer-events: none; }
+.community-label { font-size: 11px; fill: var(--text2); text-anchor: middle; pointer-events: none; opacity: 0.7; }
+.group-hull { fill-opacity: 0.06; stroke-opacity: 0.5; stroke-width: 2; pointer-events: none; }
+.group-label { font-size: 13px; font-weight: 600; fill-opacity: 0.6; text-anchor: middle; pointer-events: none; }
+
+/* ===== Timeline ===== */
+#timeline-bar { position:fixed; bottom:52px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:8px 16px; z-index:50; display:none; align-items:center; gap:12px; min-width:400px; }
+#timeline-slider { flex:1; accent-color:var(--accent); }
+#timeline-date { font-size:12px; color:var(--text2); min-width:80px; text-align:center; }
+
+/* ===== Tag Filter Panel ===== */
+#tag-filter-panel { position:fixed; top:48px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; z-index:51; max-width:600px; max-height:300px; overflow-y:auto; display:none; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+
+/* ===== Command Palette ===== */
+#command-palette { position:fixed; top:20%; left:50%; transform:translateX(-50%); width:400px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px; z-index:300; box-shadow:0 20px 60px rgba(0,0,0,0.5); display:none; }
+#cmd-search { font-size:16px; padding:12px; border-radius:12px; }
+#cmd-results { max-height:300px; overflow-y:auto; margin-top:8px; }
+.cmd-item { padding:8px 12px; border-radius:8px; cursor:pointer; font-size:13px; display:flex; justify-content:space-between; }
+.cmd-item:hover, .cmd-item.active { background:var(--surface2); }
+.cmd-item .cmd-sub { font-size:11px; color:var(--text2); }
+
+/* ===== Minimap ===== */
+#minimap { position:fixed; bottom:60px; left:16px; width:180px; height:130px; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; z-index:50; cursor:pointer; display:none; }
+#minimap-canvas { width:100%; height:100%; }
+#minimap-viewport { position:absolute; border:1.5px solid var(--accent); border-radius:2px; background:rgba(108,124,255,0.1); pointer-events:none; }
+
+/* ===== Misc new ===== */
+.island-item { padding:8px 12px; border-radius:8px; margin-bottom:4px; background:var(--surface2); cursor:pointer; font-size:13px; }
+.island-item:hover { background:var(--border); }
+.island-isolated { border-left:3px solid var(--danger); }
+.dimmed { opacity:0.1 !important; }
+.venn-circle { fill-opacity:0.15; stroke-width:2; }
+.graph-list-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:8px; margin-bottom:4px; }
+.graph-list-item:hover { background:var(--surface2); }
+.graph-list-item.active { border-left:3px solid var(--accent); background:var(--surface2); }
+#graph-switcher { display:flex; gap:6px; align-items:center; margin-top:8px; }
+#graph-switcher select { flex:1; padding:4px 8px; font-size:12px; }
+textarea { resize:vertical; min-height:60px; font-family:inherit; width:100%; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; outline:none; }
+textarea:focus { border-color:var(--accent); }
+#undo-redo-bar { display:flex; gap:4px; }
+#undo-redo-bar button:disabled { opacity:0.3; cursor:default; }
+.shortcut-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid var(--border); }
+.shortcut-key { background:var(--surface2); padding:2px 8px; border-radius:4px; font-family:monospace; font-size:12px; }
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -595,6 +640,10 @@ svg { width: 100%; height: 100%; }
   <div class="sidebar-header">
     <h1>Social Graph</h1>
     <p>可视化你的社交网络</p>
+    <div id="graph-switcher">
+      <select id="graph-select" onchange="switchGraph(this.value)"></select>
+      <button class="small" onclick="showGraphSwitcher()">管理</button>
+    </div>
   </div>
   <div class="sidebar-scroll">
     <!-- Quick Add -->
@@ -670,6 +719,22 @@ svg { width: 100%; height: 100%; }
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="show-edge-labels" onchange="toggleLabel()"> 显示边标签
       </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="show-communities" onchange="toggleCommunityOverlay()"> 社区检测 (Leiden)
+      </label>
+      <div id="community-controls" style="display:none;margin-top:6px">
+        <label style="font-size:11px">分辨率 γ <span id="cpm-gamma-val">0.05</span></label>
+        <input type="range" id="cpm-gamma" min="0.01" max="0.5" step="0.01" value="0.05" style="width:100%" oninput="updateCPMGamma(this.value)">
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="show-groups" checked onchange="render()"> 显示圈子
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="show-minimap" onchange="toggleMinimap()"> 小地图
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="show-timeline" onchange="toggleTimeline()"> 时间线
+      </label>
     </div>
 
     <!-- File Sync -->
@@ -693,6 +758,11 @@ svg { width: 100%; height: 100%; }
         <button class="small" onclick="showUnknownPanel()">Unknown 管理</button>
         <button class="small" onclick="showProximityPanel()">Proximity 排行</button>
         <button class="small" onclick="showRelationPathPanel()">关系路径</button>
+        <button class="small" onclick="showBetweennessPanel()">桥梁人物</button>
+        <button class="small" onclick="showIslandPanel()">孤岛检测</button>
+        <button class="small" onclick="showOverlapPanel()">社群重叠</button>
+        <button class="small" onclick="showGroupManager()">圈子管理</button>
+        <button class="small" onclick="showShortcutHelp()">快捷键 (?)</button>
         <button class="small" onclick="resetLayout()">重置布局</button>
         <button class="small danger" onclick="confirmClear()">清空数据</button>
       </div>
@@ -710,6 +780,18 @@ svg { width: 100%; height: 100%; }
   <select id="filter-relation" onchange="applyFilter()">
     <option value="">全部关系</option>
   </select>
+  <button class="small" onclick="toggleTagFilterPanel()">标签过滤</button>
+  <div id="undo-redo-bar">
+    <button class="small" id="btn-undo" onclick="undo()" title="撤销 Ctrl+Z" disabled>↩</button>
+    <button class="small" id="btn-redo" onclick="redo()" title="重做 Ctrl+Y" disabled>↪</button>
+  </div>
+</div>
+<div id="tag-filter-panel">
+  <div id="tag-filter-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+  <div style="display:flex;gap:6px">
+    <button class="small primary" onclick="applyTagFilter()">应用</button>
+    <button class="small" onclick="clearTagFilter()">清除</button>
+  </div>
 </div>
 
 <!-- Graph -->
@@ -738,6 +820,25 @@ svg { width: 100%; height: 100%; }
 <!-- Legend -->
 <div id="legend"></div>
 
+<!-- Timeline -->
+<div id="timeline-bar">
+  <button class="small" id="timeline-play" onclick="toggleTimelinePlay()">▶</button>
+  <input type="range" id="timeline-slider" min="0" max="100" value="100" oninput="onTimelineSlide(this.value)">
+  <span id="timeline-date">全部</span>
+</div>
+
+<!-- Command Palette -->
+<div id="command-palette">
+  <input type="text" id="cmd-search" placeholder="搜索人物... (Esc 关闭)" autocomplete="off">
+  <div id="cmd-results"></div>
+</div>
+
+<!-- Minimap -->
+<div id="minimap">
+  <canvas id="minimap-canvas" width="360" height="260"></canvas>
+  <div id="minimap-viewport"></div>
+</div>
+
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
 // ===== Data Model =====
@@ -761,13 +862,16 @@ const DEFAULT_CHIPS = {
 
 function loadCustomChips() {
   try {
-    const saved = localStorage.getItem('social-graph-custom-chips');
+    const saved = localStorage.getItem(currentChipsKey());
     if (saved) return JSON.parse(saved);
+    // fallback to old key for migration
+    const old = localStorage.getItem('social-graph-custom-chips');
+    if (old && currentGraphId === 'default') return JSON.parse(old);
   } catch(e) {}
   return { familiarity: [], contacts: [], relations: [], info: [] };
 }
 function saveCustomChips() {
-  localStorage.setItem('social-graph-custom-chips', JSON.stringify(userChips));
+  localStorage.setItem(currentChipsKey(), JSON.stringify(userChips));
   saveToFile();
 }
 let userChips = loadCustomChips();
@@ -779,13 +883,15 @@ function getAllChips(category) {
 // ===== Transitivity =====
 function loadTransitive() {
   try {
-    const saved = localStorage.getItem('social-graph-transitive');
+    const saved = localStorage.getItem(currentTransitiveKey());
     if (saved) return new Set(JSON.parse(saved));
+    const old = localStorage.getItem('social-graph-transitive');
+    if (old && currentGraphId === 'default') return new Set(JSON.parse(old));
   } catch(e) {}
   return new Set();
 }
 function saveTransitive() {
-  localStorage.setItem('social-graph-transitive', JSON.stringify([...transitiveSet]));
+  localStorage.setItem(currentTransitiveKey(), JSON.stringify([...transitiveSet]));
   saveToFile();
 }
 let transitiveSet = loadTransitive();
@@ -876,6 +982,133 @@ function applyFullTransitiveClosure(rel) {
   return totalAdded;
 }
 
+// ===== Undo / Redo =====
+let undoStack = [];
+let redoStack = [];
+const MAX_UNDO = 50;
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(data));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack = [];
+  updateUndoButtons();
+}
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(data));
+  data = JSON.parse(undoStack.pop());
+  localStorage.setItem(currentGraphKey(), JSON.stringify(data));
+  render();
+  updateUndoButtons();
+  toast('已撤销');
+}
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(data));
+  data = JSON.parse(redoStack.pop());
+  localStorage.setItem(currentGraphKey(), JSON.stringify(data));
+  render();
+  updateUndoButtons();
+  toast('已重做');
+}
+function updateUndoButtons() {
+  const u = document.getElementById('btn-undo');
+  const r = document.getElementById('btn-redo');
+  if (u) u.disabled = undoStack.length === 0;
+  if (r) r.disabled = redoStack.length === 0;
+}
+
+// ===== Multi-Graph =====
+let currentGraphId = 'default';
+
+function loadGraphRegistry() {
+  try {
+    const s = localStorage.getItem('social-graph-registry');
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return [{ id: 'default', name: '我的社交网络' }];
+}
+function saveGraphRegistry() {
+  localStorage.setItem('social-graph-registry', JSON.stringify(graphRegistry));
+}
+let graphRegistry = loadGraphRegistry();
+
+function currentGraphKey() { return 'social-graph-data' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+function currentChipsKey() { return 'social-graph-custom-chips' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+function currentTransitiveKey() { return 'social-graph-transitive' + (currentGraphId === 'default' ? '' : '-' + currentGraphId); }
+
+function refreshGraphSelect() {
+  const sel = document.getElementById('graph-select');
+  sel.innerHTML = graphRegistry.map(g =>
+    `<option value="${g.id}" ${g.id === currentGraphId ? 'selected' : ''}>${g.name}</option>`
+  ).join('');
+}
+
+function switchGraph(graphId) {
+  // Save current
+  saveData();
+  // Switch
+  currentGraphId = graphId;
+  userChips = loadCustomChips();
+  transitiveSet = loadTransitive();
+  data = loadData();
+  undoStack = []; redoStack = [];
+  updateUndoButtons();
+  renderChipGroup('familiarity', 'familiarity-chips', false);
+  renderChipGroup('contacts', 'contact-chips', true);
+  renderChipGroup('relations', 'relation-chips', true);
+  renderChipGroup('info', 'info-chips', true);
+  renderConnectRelationChips();
+  render();
+  centerView();
+  refreshGraphSelect();
+}
+
+function createNewGraph(name) {
+  const id = 'g_' + Date.now();
+  graphRegistry.push({ id, name });
+  saveGraphRegistry();
+  // Init empty data
+  localStorage.setItem('social-graph-data-' + id, JSON.stringify(JSON.parse(JSON.stringify(DEFAULT_DATA))));
+  switchGraph(id);
+  toast(`已创建「${name}」`);
+}
+
+function deleteGraph(graphId) {
+  if (graphId === 'default') { toast('不能删除默认图谱'); return; }
+  graphRegistry = graphRegistry.filter(g => g.id !== graphId);
+  saveGraphRegistry();
+  localStorage.removeItem('social-graph-data-' + graphId);
+  localStorage.removeItem('social-graph-custom-chips-' + graphId);
+  localStorage.removeItem('social-graph-transitive-' + graphId);
+  if (currentGraphId === graphId) switchGraph('default');
+  else refreshGraphSelect();
+  toast('已删除');
+}
+
+function showGraphSwitcher() {
+  let html = `<div class="modal" style="width:440px"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    图谱管理 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>`;
+  graphRegistry.forEach(g => {
+    html += `<div class="graph-list-item ${g.id === currentGraphId ? 'active' : ''}">
+      <span>${g.name} ${g.id === currentGraphId ? '(当前)' : ''}</span>
+      <span style="display:flex;gap:4px">
+        ${g.id !== currentGraphId ? `<button class="small" onclick="this.closest('.modal-overlay').remove();switchGraph('${g.id}')">切换</button>` : ''}
+        ${g.id !== 'default' ? `<button class="small danger" onclick="deleteGraph('${g.id}');this.closest('.modal-overlay').remove();showGraphSwitcher()">删除</button>` : ''}
+      </span>
+    </div>`;
+  });
+  html += `<div style="display:flex;gap:6px;margin-top:12px">
+    <input type="text" id="new-graph-name" placeholder="新图谱名称...">
+    <button class="primary" onclick="const n=document.getElementById('new-graph-name').value.trim();if(n){createNewGraph(n);this.closest('.modal-overlay').remove();showGraphSwitcher();}">创建</button>
+  </div></div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
 function getFamiliarityColor(name) {
   if (FAMILIARITY_COLORS[name]) return FAMILIARITY_COLORS[name];
   const idx = (userChips.familiarity || []).indexOf(name);
@@ -885,9 +1118,10 @@ function getFamiliarityColor(name) {
 
 const DEFAULT_DATA = {
   nodes: [
-    { id: 'me', name: '我', familiarity: '密友', contacts: [], tags: ['中心'], x: 0, y: 0, fx: null, fy: null }
+    { id: 'me', name: '我', familiarity: '密友', contacts: [], tags: ['中心'], notes: '', x: 0, y: 0, fx: null, fy: null }
   ],
-  edges: []
+  edges: [],
+  groups: []
 };
 
 let data = loadData();
@@ -910,10 +1144,19 @@ let connectTarget = null;  // for quick-add connect-to
 
 function loadData() {
   try {
-    const saved = localStorage.getItem('social-graph-data');
+    const saved = localStorage.getItem(currentGraphKey());
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.nodes && parsed.nodes.length > 0) return parsed;
+      if (parsed.nodes && parsed.nodes.length > 0) {
+        parsed.groups = parsed.groups || [];
+        parsed.nodes.forEach(n => { n.notes = n.notes || ''; });
+        return parsed;
+      }
+    }
+    // Fallback for migration
+    if (currentGraphId === 'default') {
+      const old = localStorage.getItem('social-graph-data');
+      if (old) { const p = JSON.parse(old); if (p.nodes?.length) { p.groups = p.groups || []; p.nodes.forEach(n => { n.notes = n.notes || ''; }); return p; } }
     }
   } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -928,7 +1171,8 @@ function saveData() {
       n.y = simNode.y;
     }
   });
-  localStorage.setItem('social-graph-data', JSON.stringify(data));
+  data.groups = data.groups || [];
+  localStorage.setItem(currentGraphKey(), JSON.stringify(data));
   // Auto-save to bound file
   saveToFile();
 }
@@ -1107,6 +1351,8 @@ svg.append('defs').append('marker')
   .attr('d', 'M0,-5L10,0L0,5')
   .attr('fill', '#4a4e69');
 
+const groupHullGroup = container.append('g').attr('class', 'group-hulls');
+const communityHullGroup = container.append('g').attr('class', 'community-hulls');
 const linkGroup = container.append('g').attr('class', 'links');
 const linkLabelGroup = container.append('g').attr('class', 'link-labels');
 const nodeGroup = container.append('g').attr('class', 'nodes');
@@ -1116,6 +1362,7 @@ const zoom = d3.zoom()
   .scaleExtent([0.1, 5])
   .on('zoom', (event) => {
     container.attr('transform', event.transform);
+    updateMinimap();
   });
 svg.call(zoom);
 
@@ -1229,6 +1476,13 @@ function ticked() {
 
   container.selectAll('.node-group')
     .attr('transform', d => `translate(${d.x},${d.y})`);
+
+  // Update hulls each tick
+  renderCommunityHulls();
+  renderGroupHulls();
+
+  // Update minimap
+  updateMinimap();
 }
 
 // ===== Render =====
@@ -1269,12 +1523,41 @@ function render() {
     visibleNodeIds = new Set([...visibleNodeIds].filter(id => relNodeIds.has(id)));
   }
 
+  // Tag filter
+  if (tagFilterActive && tagFilterTags.length > 0) {
+    const tagNodeIds = new Set(['me']);
+    data.nodes.forEach(n => {
+      if ((n.tags || []).some(t => tagFilterTags.includes(t))) tagNodeIds.add(n.id);
+    });
+    data.edges.forEach(e => {
+      if ((e.relations || []).some(r => tagFilterTags.includes(r))) {
+        const s = typeof e.source === 'object' ? e.source.id : e.source;
+        const t = typeof e.target === 'object' ? e.target.id : e.target;
+        tagNodeIds.add(s); tagNodeIds.add(t);
+      }
+    });
+    visibleNodeIds = new Set([...visibleNodeIds].filter(id => tagNodeIds.has(id)));
+  }
+
+  // Timeline filter
+  if (timelineCurrentDate) {
+    const cutoff = timelineCurrentDate;
+    const timelineNodeIds = new Set();
+    data.nodes.forEach(n => {
+      if (!n.metDate || n.metDate <= cutoff) timelineNodeIds.add(n.id);
+    });
+    visibleNodeIds = new Set([...visibleNodeIds].filter(id => timelineNodeIds.has(id)));
+  }
+
   const filteredNodes = simNodes.filter(n => visibleNodeIds.has(n.id));
-  const filteredEdges = simEdges.filter(e => {
+  let filteredEdges = simEdges.filter(e => {
     const sid = typeof e.source === 'object' ? e.source.id : e.source;
     const tid = typeof e.target === 'object' ? e.target.id : e.target;
     return visibleNodeIds.has(sid) && visibleNodeIds.has(tid);
   });
+  if (timelineCurrentDate) {
+    filteredEdges = filteredEdges.filter(e => !e.metDate || e.metDate <= timelineCurrentDate);
+  }
 
   // Links
   const links = linkGroup.selectAll('.link')
@@ -1343,10 +1626,27 @@ function render() {
     .attr('dy', d => getNodeRadius(d) + 14);
   allNodes.classed('selected', d => d.id === selectedNodeId);
 
+  // Highlight component (dim others)
+  if (highlightedComponent) {
+    allNodes.classed('dimmed', d => !highlightedComponent.has(d.id));
+    linkGroup.selectAll('.link').classed('dimmed', d => {
+      const s = typeof d.source === 'object' ? d.source.id : d.source;
+      const t = typeof d.target === 'object' ? d.target.id : d.target;
+      return !highlightedComponent.has(s) || !highlightedComponent.has(t);
+    });
+  } else {
+    allNodes.classed('dimmed', false);
+    linkGroup.selectAll('.link').classed('dimmed', false);
+  }
+
   // Update simulation
   simulation.nodes(filteredNodes);
   simulation.force('link').links(filteredEdges);
   simulation.alpha(0.3).restart();
+
+  // Render hulls
+  renderCommunityHulls();
+  renderGroupHulls();
 
   // Update stats
   document.getElementById('stat-nodes').textContent = data.nodes.length;
@@ -1362,32 +1662,7 @@ function render() {
   saveData();
 }
 
-function countGroups() {
-  // Simple connected components count
-  const visited = new Set();
-  let groups = 0;
-  const adj = {};
-  data.nodes.forEach(n => { adj[n.id] = []; });
-  data.edges.forEach(e => {
-    const sid = typeof e.source === 'object' ? e.source.id : e.source;
-    const tid = typeof e.target === 'object' ? e.target.id : e.target;
-    if (adj[sid]) adj[sid].push(tid);
-    if (adj[tid]) adj[tid].push(sid);
-  });
-  data.nodes.forEach(n => {
-    if (!visited.has(n.id)) {
-      groups++;
-      const stack = [n.id];
-      while (stack.length) {
-        const curr = stack.pop();
-        if (visited.has(curr)) continue;
-        visited.add(curr);
-        (adj[curr] || []).forEach(nb => { if (!visited.has(nb)) stack.push(nb); });
-      }
-    }
-  });
-  return groups;
-}
+function countGroups() { return getConnectedComponents().length; }
 
 function updateRelationFilter() {
   const select = document.getElementById('filter-relation');
@@ -1433,6 +1708,7 @@ function quickAdd() {
   const nameInput = document.getElementById('add-name');
   const name = nameInput.value.trim();
   if (!name) { toast('请输入姓名'); return; }
+  pushUndo();
 
   // Check duplicate
   if (data.nodes.find(n => n.name === name)) {
@@ -1566,6 +1842,7 @@ function refreshBatchSelects() {
 refreshBatchSelects();
 
 function batchConnect() {
+  pushUndo();
   const personName = document.getElementById('batch-person').value.trim();
   const person = batchPersonId ? data.nodes.find(n => n.id === batchPersonId) : data.nodes.find(n => n.name === personName);
   if (!person) { toast('请选择人物'); return; }
@@ -1623,6 +1900,7 @@ function batchConnect() {
 }
 
 function connectExisting() {
+  pushUndo();
   const nameA = document.getElementById('connect-a').value.trim();
   const nameB = document.getElementById('connect-b').value.trim();
 
@@ -1755,6 +2033,24 @@ function showNodeDetail(d) {
       <button class="small" onclick="addTag('${d.id}')">添加</button>
     </div>`;
 
+  // Notes
+  html += `<label>备注</label>
+    <textarea id="detail-notes" rows="3" placeholder="添加备注..." onchange="updateNodeNotes('${d.id}', this.value)">${(nodeData.notes || '').replace(/</g,'&lt;')}</textarea>`;
+
+  // Met date
+  html += `<label>认识日期</label>
+    <input type="date" value="${nodeData.metDate || ''}" onchange="updateNodeMetDate('${d.id}', this.value)" style="width:auto">`;
+
+  // Groups
+  const nodeGroups = (data.groups || []).filter(g => g.members.includes(d.id));
+  if (nodeGroups.length > 0) {
+    html += `<label>所属圈子</label><div class="tag-container">`;
+    nodeGroups.forEach(g => {
+      html += `<div class="tag" style="background:${g.color}20;border-color:${g.color}50;color:${g.color}">${g.name}</div>`;
+    });
+    html += '</div>';
+  }
+
   // Connections list
   html += `<label>关系 (${connections.length})</label><div style="margin-top:8px">`;
   connections.forEach(e => {
@@ -1812,6 +2108,8 @@ function showEdgeDetail(d) {
       <input type="text" id="detail-relation-input" placeholder="新关系..." onkeydown="if(event.key==='Enter'){addRelation('${d.id}')}">
       <button class="small" onclick="addRelation('${d.id}')">添加</button>
     </div>
+    <label>建立日期</label>
+    <input type="date" value="${edgeData.metDate || ''}" onchange="updateEdgeMetDate('${d.id}', this.value)" style="width:auto">
     <button class="danger full" onclick="deleteEdge('${d.id}')">删除此关系</button>
   `;
 
@@ -1872,6 +2170,18 @@ function removeTag(id, tag) {
     showNodeDetail(node);
   }
 }
+function updateNodeNotes(id, text) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) { node.notes = text; saveData(); }
+}
+function updateNodeMetDate(id, val) {
+  const node = data.nodes.find(n => n.id === id);
+  if (node) { node.metDate = val || null; saveData(); }
+}
+function updateEdgeMetDate(edgeId, val) {
+  const edge = data.edges.find(e => e.id === edgeId);
+  if (edge) { edge.metDate = val || null; saveData(); }
+}
 function updateEdgeFamiliarity(edgeId, val) {
   const edge = data.edges.find(e => e.id === edgeId);
   if (edge) { edge.familiarity = val; render(); }
@@ -1898,6 +2208,7 @@ function removeRelation(edgeId, rel) {
 
 function deleteNode(id) {
   if (id === 'me') return;
+  pushUndo();
   data.nodes = data.nodes.filter(n => n.id !== id);
   data.edges = data.edges.filter(e => {
     const sid = typeof e.source === 'object' ? e.source.id : e.source;
@@ -1910,6 +2221,7 @@ function deleteNode(id) {
 }
 
 function deleteEdge(id) {
+  pushUndo();
   data.edges = data.edges.filter(e => e.id !== id);
   closeDetail();
   render();
@@ -1938,9 +2250,16 @@ function showNodeContextMenu(event, d) {
   hideContextMenu();
   const menu = document.getElementById('context-menu');
   const isMe = d.id === 'me';
+  const groupMenuItems = (data.groups || []).map(g => {
+    const inGroup = g.members.includes(d.id);
+    return `<div class="menu-item" onclick="toggleGroupMember('${g.id}','${d.id}',${!inGroup});hideContextMenu();render()">
+      ${inGroup ? '✓' : '○'} ${g.name}
+    </div>`;
+  }).join('');
   let items = `
     <div class="menu-item" onclick="startConnectFrom('${d.id}')">🔗 从此人连接...</div>
     <div class="menu-item" onclick="pinNode('${d.id}')">📌 ${d.fx !== null && d.fx !== undefined ? '取消固定' : '固定位置'}</div>
+    ${(data.groups || []).length > 0 ? '<div class="separator"></div>' + groupMenuItems : ''}
   `;
   if (!isMe) {
     items += `
@@ -2040,6 +2359,7 @@ function confirmConnect(fromId, toId) {
     return (sid === fromId && tid === toId) || (sid === toId && tid === fromId);
   });
 
+  pushUndo();
   const finalRel = relation || '认识';
   if (existing) {
     if (!existing.relations.includes(finalRel)) {
@@ -2792,36 +3112,730 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ===== Keyboard shortcuts =====
+// ===== Leiden-CPM Community Detection =====
+let communityMap = null;
+let communityEnabled = false;
+const COMMUNITY_COLORS = ['#ef4444','#fb923c','#34d399','#60a5fa','#a78bfa','#f472b6','#38bdf8','#facc15','#2dd4bf','#818cf8','#22d3ee','#fb7185'];
+
+function leidenCPM(gamma = 0.05) {
+  const nodes = data.nodes.map(n => n.id);
+  const nMap = {}; nodes.forEach((id, i) => nMap[id] = i);
+  const n = nodes.length;
+  const adj = Array.from({length: n}, () => []);
+  data.edges.forEach(e => {
+    const s = nMap[typeof e.source === 'object' ? e.source.id : e.source];
+    const t = nMap[typeof e.target === 'object' ? e.target.id : e.target];
+    if (s !== undefined && t !== undefined) { adj[s].push(t); adj[t].push(s); }
+  });
+  // Initialize: each node in own community
+  const comm = new Int32Array(n);
+  for (let i = 0; i < n; i++) comm[i] = i;
+  // Local moving phase (iterate until stable)
+  let improved = true;
+  for (let iter = 0; iter < 20 && improved; iter++) {
+    improved = false;
+    for (let i = 0; i < n; i++) {
+      // Count edges to each neighbor community
+      const edgesToComm = {};
+      adj[i].forEach(j => { const c = comm[j]; edgesToComm[c] = (edgesToComm[c] || 0) + 1; });
+      const myComm = comm[i];
+      // Community sizes
+      const commSize = {};
+      for (let j = 0; j < n; j++) commSize[comm[j]] = (commSize[comm[j]] || 0) + 1;
+      // Evaluate move: delta Q = edges_to_c - gamma * size_c (for joining c)
+      // Current contribution: edges_to_own - gamma * (size_own - 1)
+      const currentGain = (edgesToComm[myComm] || 0) - gamma * (commSize[myComm] - 1);
+      let bestComm = myComm, bestGain = currentGain;
+      for (const c of Object.keys(edgesToComm)) {
+        const ci = parseInt(c);
+        if (ci === myComm) continue;
+        const gain = edgesToComm[ci] - gamma * commSize[ci];
+        if (gain > bestGain) { bestGain = gain; bestComm = ci; }
+      }
+      if (bestComm !== myComm) { comm[i] = bestComm; improved = true; }
+    }
+  }
+  // Renumber communities
+  const result = new Map();
+  const remap = {};
+  let nextId = 0;
+  for (let i = 0; i < n; i++) {
+    if (remap[comm[i]] === undefined) remap[comm[i]] = nextId++;
+    result.set(nodes[i], remap[comm[i]]);
+  }
+  return result;
+}
+
+function toggleCommunityOverlay() {
+  communityEnabled = document.getElementById('show-communities').checked;
+  document.getElementById('community-controls').style.display = communityEnabled ? 'block' : 'none';
+  if (communityEnabled) communityMap = leidenCPM(parseFloat(document.getElementById('cpm-gamma').value));
+  else { communityMap = null; communityHullGroup.selectAll('*').remove(); }
+  render();
+}
+function updateCPMGamma(val) {
+  document.getElementById('cpm-gamma-val').textContent = val;
+  if (communityEnabled) { communityMap = leidenCPM(parseFloat(val)); render(); }
+}
+
+function convexHullPadded(points, padding) {
+  if (points.length < 2) return null;
+  if (points.length === 2) {
+    const [a, b] = points;
+    const dx = b[0]-a[0], dy = b[1]-a[1], len = Math.sqrt(dx*dx+dy*dy)||1;
+    const nx = -dy/len*padding, ny = dx/len*padding;
+    return [[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny],[b[0]-nx,b[1]-ny],[a[0]-nx,a[1]-ny]];
+  }
+  const hull = d3.polygonHull(points);
+  if (!hull) return null;
+  // Expand hull outward
+  const cx = d3.mean(hull, p => p[0]), cy = d3.mean(hull, p => p[1]);
+  return hull.map(p => {
+    const dx = p[0]-cx, dy = p[1]-cy, len = Math.sqrt(dx*dx+dy*dy)||1;
+    return [p[0]+dx/len*padding, p[1]+dy/len*padding];
+  });
+}
+
+function renderCommunityHulls() {
+  if (!communityEnabled || !communityMap) { communityHullGroup.selectAll('*').remove(); return; }
+  // Group nodes by community
+  const groups = {};
+  communityMap.forEach((cid, nodeId) => { if (!groups[cid]) groups[cid] = []; groups[cid].push(nodeId); });
+  const hullData = Object.entries(groups).filter(([,members]) => members.length >= 2).map(([cid, members]) => {
+    const points = members.map(id => {
+      const sn = simulation.nodes().find(n => n.id === id);
+      return sn ? [sn.x, sn.y] : null;
+    }).filter(Boolean);
+    return { cid: parseInt(cid), points, members };
+  });
+  const hulls = communityHullGroup.selectAll('.community-hull').data(hullData, d => d.cid);
+  hulls.exit().remove();
+  hulls.enter().append('path').attr('class','community-hull')
+    .merge(hulls)
+    .attr('d', d => { const h = convexHullPadded(d.points, 40); return h ? 'M'+h.map(p=>p.join(',')).join('L')+'Z' : ''; })
+    .attr('fill', d => COMMUNITY_COLORS[d.cid % COMMUNITY_COLORS.length])
+    .attr('stroke', d => COMMUNITY_COLORS[d.cid % COMMUNITY_COLORS.length]);
+  // Labels
+  const labels = communityHullGroup.selectAll('.community-label').data(hullData, d => d.cid);
+  labels.exit().remove();
+  labels.enter().append('text').attr('class','community-label')
+    .merge(labels)
+    .attr('x', d => d3.mean(d.points, p => p[0]))
+    .attr('y', d => d3.mean(d.points, p => p[1]) - 20)
+    .text(d => `社群${d.cid+1} (${d.members.length})`);
+}
+
+// ===== Manual Groups =====
+function showGroupManager() {
+  const groups = data.groups || [];
+  let html = `<div class="modal" style="width:500px"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    圈子管理 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>`;
+  if (groups.length === 0) {
+    html += '<div style="color:var(--text2);font-size:13px;text-align:center;padding:20px">还没有圈子</div>';
+  }
+  groups.forEach(g => {
+    const memberNames = g.members.map(id => data.nodes.find(n => n.id === id)?.name || '?').join(', ');
+    html += `<div class="island-item" style="border-left:3px solid ${g.color}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>${g.name}</strong> <span style="font-size:11px;color:var(--text2)">${g.members.length} 人</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">${memberNames || '空'}</div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="small" onclick="editGroupMembers('${g.id}')">编辑成员</button>
+        <button class="small danger" onclick="pushUndo();data.groups=data.groups.filter(x=>x.id!=='${g.id}');saveData();render();this.closest('.modal-overlay').remove();showGroupManager()">删除</button>
+      </div>
+    </div>`;
+  });
+  html += `<div style="display:flex;gap:6px;margin-top:12px">
+    <input type="text" id="new-group-name" placeholder="新圈子名称">
+    <input type="color" id="new-group-color" value="#6c7cff" style="width:40px;padding:2px;border-radius:4px">
+    <button class="primary" onclick="createGroup()">创建</button>
+  </div></div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function createGroup() {
+  const name = document.getElementById('new-group-name').value.trim();
+  const color = document.getElementById('new-group-color').value;
+  if (!name) return;
+  pushUndo();
+  data.groups = data.groups || [];
+  data.groups.push({ id: 'g_' + Date.now(), name, color, members: [] });
+  saveData(); render();
+  document.querySelector('.modal-overlay')?.remove();
+  showGroupManager();
+}
+
+function editGroupMembers(groupId) {
+  const group = data.groups.find(g => g.id === groupId);
+  if (!group) return;
+  const memberSet = new Set(group.members);
+  let html = `<div class="modal" style="width:500px;max-height:80vh"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    ${group.name} - 编辑成员 <button class="close-btn" onclick="this.closest('.modal-overlay').remove();showGroupManager()">&times;</button></h2>
+    <div style="max-height:60vh;overflow-y:auto">`;
+  data.nodes.forEach(n => {
+    const checked = memberSet.has(n.id) ? 'checked' : '';
+    html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px">
+      <input type="checkbox" ${checked} onchange="toggleGroupMember('${groupId}','${n.id}',this.checked)"> ${n.name}
+    </label>`;
+  });
+  html += '</div></div>';
+  document.querySelector('.modal-overlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function toggleGroupMember(groupId, nodeId, add) {
+  const group = data.groups.find(g => g.id === groupId);
+  if (!group) return;
+  if (add && !group.members.includes(nodeId)) group.members.push(nodeId);
+  else group.members = group.members.filter(id => id !== nodeId);
+  saveData(); render();
+}
+
+function renderGroupHulls() {
+  const showGroups = document.getElementById('show-groups')?.checked;
+  if (!showGroups || !data.groups || data.groups.length === 0) { groupHullGroup.selectAll('*').remove(); return; }
+  const hullData = data.groups.filter(g => g.members.length >= 2).map(g => {
+    const points = g.members.map(id => {
+      const sn = simulation.nodes().find(n => n.id === id);
+      return sn ? [sn.x, sn.y] : null;
+    }).filter(Boolean);
+    return { ...g, points };
+  }).filter(d => d.points.length >= 2);
+  const hulls = groupHullGroup.selectAll('.group-hull').data(hullData, d => d.id);
+  hulls.exit().remove();
+  hulls.enter().append('path').attr('class','group-hull')
+    .merge(hulls)
+    .attr('d', d => { const h = convexHullPadded(d.points, 50); return h ? 'M'+h.map(p=>p.join(',')).join('L')+'Z' : ''; })
+    .attr('fill', d => d.color).attr('stroke', d => d.color);
+  const labels = groupHullGroup.selectAll('.group-label').data(hullData, d => d.id);
+  labels.exit().remove();
+  labels.enter().append('text').attr('class','group-label')
+    .merge(labels)
+    .attr('x', d => d3.mean(d.points, p => p[0]))
+    .attr('y', d => d3.mean(d.points, p => p[1]) - 30)
+    .text(d => d.name).attr('fill', d => d.color);
+}
+
+// ===== Betweenness Centrality (Brandes) =====
+function computeBetweenness() {
+  const nodes = data.nodes.map(n => n.id);
+  const nMap = {}; nodes.forEach((id, i) => nMap[id] = i);
+  const n = nodes.length;
+  const adj = Array.from({length: n}, () => []);
+  data.edges.forEach(e => {
+    const s = nMap[typeof e.source === 'object' ? e.source.id : e.source];
+    const t = nMap[typeof e.target === 'object' ? e.target.id : e.target];
+    if (s !== undefined && t !== undefined) { adj[s].push(t); adj[t].push(s); }
+  });
+  const CB = new Float64Array(n);
+  for (let s = 0; s < n; s++) {
+    const stack = [];
+    const pred = Array.from({length: n}, () => []);
+    const sigma = new Float64Array(n); sigma[s] = 1;
+    const dist = new Int32Array(n).fill(-1); dist[s] = 0;
+    const queue = [s];
+    while (queue.length > 0) {
+      const v = queue.shift();
+      stack.push(v);
+      for (const w of adj[v]) {
+        if (dist[w] < 0) { dist[w] = dist[v] + 1; queue.push(w); }
+        if (dist[w] === dist[v] + 1) { sigma[w] += sigma[v]; pred[w].push(v); }
+      }
+    }
+    const delta = new Float64Array(n);
+    while (stack.length > 0) {
+      const w = stack.pop();
+      for (const v of pred[w]) { delta[v] += (sigma[v] / sigma[w]) * (1 + delta[w]); }
+      if (w !== s) CB[w] += delta[w];
+    }
+  }
+  // Normalize
+  const maxCB = Math.max(...CB) || 1;
+  const result = {};
+  nodes.forEach((id, i) => { result[id] = CB[i] / maxCB; });
+  return result;
+}
+
+function showBetweennessPanel() {
+  const bc = computeBetweenness();
+  const ranked = data.nodes.filter(n => n.id !== 'me').map(n => ({...n, score: bc[n.id] || 0})).sort((a,b) => b.score - a.score);
+  const maxScore = ranked.length > 0 ? ranked[0].score : 1;
+  let html = `<div class="modal" style="width:500px;max-height:80vh"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    桥梁人物 (Betweenness) <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
+    <p style="color:var(--text2);font-size:11px;margin-bottom:12px">Betweenness Centrality · 得分越高，越是连接不同圈子的关键人物</p>
+    <div style="max-height:60vh;overflow-y:auto">`;
+  if (ranked.length === 0) html += '<div class="unknown-empty">暂无数据</div>';
+  else ranked.forEach((n, i) => {
+    const color = getFamiliarityColor(n.familiarity);
+    const pct = maxScore > 0 ? (n.score / maxScore * 100) : 0;
+    html += `<div class="prox-item" onclick="this.closest('.modal-overlay').remove();focusNode('${n.id}')">
+      <div class="prox-bar-bg" style="width:${pct}%;background:${color}"></div>
+      <span class="prox-rank">${i+1}</span>
+      <span class="prox-dot" style="background:${color}"></span>
+      <span class="prox-name">${n.name}</span>
+      <span class="prox-score" style="color:${color}">${n.score.toFixed(3)}</span>
+    </div>`;
+  });
+  html += '</div></div>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ===== Island Detection =====
+function getConnectedComponents() {
+  const visited = new Set();
+  const components = [];
+  const adj = {};
+  data.nodes.forEach(n => { adj[n.id] = []; });
+  data.edges.forEach(e => {
+    const sid = typeof e.source === 'object' ? e.source.id : e.source;
+    const tid = typeof e.target === 'object' ? e.target.id : e.target;
+    if (adj[sid]) adj[sid].push(tid);
+    if (adj[tid]) adj[tid].push(sid);
+  });
+  data.nodes.forEach(n => {
+    if (!visited.has(n.id)) {
+      const comp = [];
+      const stack = [n.id];
+      while (stack.length) {
+        const curr = stack.pop();
+        if (visited.has(curr)) continue;
+        visited.add(curr);
+        comp.push(curr);
+        (adj[curr] || []).forEach(nb => { if (!visited.has(nb)) stack.push(nb); });
+      }
+      components.push(comp);
+    }
+  });
+  return components.sort((a, b) => b.length - a.length);
+}
+
+function showIslandPanel() {
+  const components = getConnectedComponents();
+  const mainComp = components[0] || [];
+  const islands = components.filter((c, i) => i > 0);
+  const isolated = data.nodes.filter(n => {
+    return !data.edges.some(e => {
+      const s = typeof e.source === 'object' ? e.source.id : e.source;
+      const t = typeof e.target === 'object' ? e.target.id : e.target;
+      return s === n.id || t === n.id;
+    });
+  });
+  let html = `<div class="modal" style="width:500px;max-height:80vh"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    孤岛检测 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
+    <p style="color:var(--text2);font-size:11px;margin-bottom:12px">连通分量: ${components.length} · 主网络: ${mainComp.length} 人 · 孤岛: ${islands.length} 个</p>
+    <div style="max-height:60vh;overflow-y:auto">`;
+  if (isolated.length > 0) {
+    html += `<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--danger)">孤立节点 (${isolated.length})</div>`;
+    isolated.forEach(n => {
+      html += `<div class="island-item island-isolated" onclick="this.closest('.modal-overlay').remove();focusNode('${n.id}')">${n.name}</div>`;
+    });
+  }
+  if (islands.length > 0) {
+    html += `<div style="font-size:12px;font-weight:600;margin:12px 0 8px">断开的子图 (${islands.length})</div>`;
+    islands.forEach((comp, i) => {
+      const names = comp.map(id => data.nodes.find(n => n.id === id)?.name || '?').join(', ');
+      html += `<div class="island-item" onclick="highlightComponent(${JSON.stringify(comp).replace(/"/g,'&quot;')});this.closest('.modal-overlay').remove()">
+        <div>子图 ${i+1}: ${comp.length} 人</div>
+        <div style="font-size:11px;color:var(--text2)">${names}</div>
+      </div>`;
+    });
+  }
+  if (islands.length === 0 && isolated.length === 0) {
+    html += '<div class="unknown-empty">所有节点都在同一个连通分量中，没有孤岛</div>';
+  }
+  html += '</div></div>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+let highlightedComponent = null;
+function highlightComponent(comp) {
+  highlightedComponent = new Set(comp);
+  render();
+  toast(`高亮 ${comp.length} 人子图，点击空白处取消`);
+}
+
+// ===== Community Overlap =====
+function showOverlapPanel() {
+  const allTags = new Set();
+  data.edges.forEach(e => (e.relations || []).forEach(r => allTags.add(r)));
+  data.nodes.forEach(n => (n.tags || []).forEach(t => allTags.add(t)));
+  const tagOpts = [...allTags].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+  let html = `<div class="modal" style="width:500px"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    社群重叠分析 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1"><label>标签 A</label><select id="overlap-a">${tagOpts}</select></div>
+      <div style="flex:1"><label>标签 B</label><select id="overlap-b">${tagOpts}</select></div>
+    </div>
+    <button class="small primary" onclick="computeOverlap()">分析</button>
+    <div id="overlap-result" style="margin-top:12px"></div>
+  </div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+function getTagMembers(tag) {
+  const ids = new Set();
+  data.nodes.forEach(n => { if ((n.tags || []).includes(tag)) ids.add(n.id); });
+  data.edges.forEach(e => {
+    if (!(e.relations || []).includes(tag)) return;
+    const s = typeof e.source === 'object' ? e.source.id : e.source;
+    const t = typeof e.target === 'object' ? e.target.id : e.target;
+    ids.add(s); ids.add(t);
+  });
+  return ids;
+}
+
+function computeOverlap() {
+  const tagA = document.getElementById('overlap-a').value;
+  const tagB = document.getElementById('overlap-b').value;
+  if (!tagA || !tagB) return;
+  const setA = getTagMembers(tagA);
+  const setB = getTagMembers(tagB);
+  const inter = new Set([...setA].filter(x => setB.has(x)));
+  const union = new Set([...setA, ...setB]);
+  const jaccard = union.size > 0 ? (inter.size / union.size * 100).toFixed(1) : 0;
+  let html = `<div style="text-align:center;margin:16px 0">
+    <svg width="300" height="180" viewBox="0 0 300 180">
+      <circle cx="115" cy="90" r="70" class="venn-circle" fill="#60a5fa" stroke="#60a5fa"/>
+      <circle cx="185" cy="90" r="70" class="venn-circle" fill="#f472b6" stroke="#f472b6"/>
+      <text x="85" y="90" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700">${setA.size}</text>
+      <text x="150" y="90" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700">${inter.size}</text>
+      <text x="215" y="90" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700">${setB.size}</text>
+      <text x="85" y="170" text-anchor="middle" fill="var(--text2)" font-size="11">${tagA}</text>
+      <text x="215" y="170" text-anchor="middle" fill="var(--text2)" font-size="11">${tagB}</text>
+    </svg>
+  </div>
+  <div style="font-size:13px;color:var(--text2);text-align:center">Jaccard 相似度: ${jaccard}%</div>`;
+  if (inter.size > 0) {
+    html += `<div style="margin-top:12px;font-size:12px;font-weight:600">共同成员 (${inter.size})</div>`;
+    [...inter].forEach(id => {
+      const n = data.nodes.find(nd => nd.id === id);
+      if (n) html += `<div class="search-result" onclick="this.closest('.modal-overlay').remove();focusNode('${id}')">${n.name}</div>`;
+    });
+  }
+  document.getElementById('overlap-result').innerHTML = html;
+}
+
+// ===== Tag Subgraph Filter =====
+let tagFilterTags = [];
+let tagFilterActive = false;
+
+function toggleTagFilterPanel() {
+  const panel = document.getElementById('tag-filter-panel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if (show) buildTagFilterChips();
+}
+
+function buildTagFilterChips() {
+  const allTags = new Set();
+  data.edges.forEach(e => (e.relations || []).forEach(r => allTags.add(r)));
+  data.nodes.forEach(n => (n.tags || []).forEach(t => allTags.add(t)));
+  const container = document.getElementById('tag-filter-chips');
+  container.innerHTML = [...allTags].sort().map(t => {
+    const sel = tagFilterTags.includes(t) ? ' selected' : '';
+    return `<div class="chip${sel}" data-val="${t}" onclick="this.classList.toggle('selected')">${t}</div>`;
+  }).join('');
+}
+
+function applyTagFilter() {
+  const selected = [...document.querySelectorAll('#tag-filter-chips .chip.selected')].map(c => c.dataset.val);
+  if (selected.length === 0) { clearTagFilter(); return; }
+  tagFilterTags = selected;
+  tagFilterActive = true;
+  document.getElementById('tag-filter-panel').style.display = 'none';
+  render();
+  toast(`过滤: ${selected.join(', ')}`);
+}
+
+function clearTagFilter() {
+  tagFilterTags = [];
+  tagFilterActive = false;
+  document.getElementById('tag-filter-panel').style.display = 'none';
+  render();
+  toast('已清除标签过滤');
+}
+
+// ===== Timeline =====
+let timelineCurrentDate = null;
+let timelineRange = null;
+let timelinePlaying = false;
+let timelineInterval = null;
+
+function toggleTimeline() {
+  const show = document.getElementById('show-timeline').checked;
+  document.getElementById('timeline-bar').style.display = show ? 'flex' : 'none';
+  if (show) {
+    timelineRange = getTimelineRange();
+    if (!timelineRange) { toast('没有日期数据'); document.getElementById('show-timeline').checked = false; document.getElementById('timeline-bar').style.display = 'none'; return; }
+    document.getElementById('timeline-slider').value = 100;
+    document.getElementById('timeline-date').textContent = '全部';
+    timelineCurrentDate = null;
+  } else {
+    timelineCurrentDate = null;
+    stopTimelinePlay();
+    render();
+  }
+}
+
+function getTimelineRange() {
+  const dates = [];
+  data.nodes.forEach(n => { if (n.metDate) dates.push(n.metDate); });
+  data.edges.forEach(e => { if (e.metDate) dates.push(e.metDate); });
+  if (dates.length === 0) return null;
+  dates.sort();
+  return { min: dates[0], max: dates[dates.length - 1] };
+}
+
+function onTimelineSlide(val) {
+  if (!timelineRange) return;
+  if (parseInt(val) >= 100) {
+    timelineCurrentDate = null;
+    document.getElementById('timeline-date').textContent = '全部';
+  } else {
+    const minT = new Date(timelineRange.min).getTime();
+    const maxT = new Date(timelineRange.max).getTime();
+    const t = minT + (maxT - minT) * (val / 100);
+    const d = new Date(t);
+    timelineCurrentDate = d.toISOString().slice(0, 10);
+    document.getElementById('timeline-date').textContent = timelineCurrentDate;
+  }
+  render();
+}
+
+function toggleTimelinePlay() {
+  if (timelinePlaying) { stopTimelinePlay(); return; }
+  timelinePlaying = true;
+  document.getElementById('timeline-play').textContent = '⏸';
+  const slider = document.getElementById('timeline-slider');
+  slider.value = 0;
+  onTimelineSlide(0);
+  timelineInterval = setInterval(() => {
+    let v = parseInt(slider.value) + 1;
+    if (v > 100) { stopTimelinePlay(); return; }
+    slider.value = v;
+    onTimelineSlide(v);
+  }, 200);
+}
+
+function stopTimelinePlay() {
+  timelinePlaying = false;
+  document.getElementById('timeline-play').textContent = '▶';
+  if (timelineInterval) { clearInterval(timelineInterval); timelineInterval = null; }
+}
+
+// ===== Minimap =====
+let minimapEnabled = false;
+let minimapThrottle = 0;
+
+function toggleMinimap() {
+  minimapEnabled = document.getElementById('show-minimap').checked;
+  document.getElementById('minimap').style.display = minimapEnabled ? 'block' : 'none';
+  if (minimapEnabled) updateMinimap();
+}
+
+function updateMinimap() {
+  if (!minimapEnabled) return;
+  minimapThrottle++;
+  if (minimapThrottle % 3 !== 0) return; // throttle
+  const canvas = document.getElementById('minimap-canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const nodes = simulation.nodes();
+  if (nodes.length === 0) return;
+  // Compute bounds
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => { minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x); minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y); });
+  const pad = 50;
+  minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+  const scale = Math.min(w / rangeX, h / rangeY);
+  const ox = (w - rangeX * scale) / 2, oy = (h - rangeY * scale) / 2;
+  const tx = x => (x - minX) * scale + ox;
+  const ty = y => (y - minY) * scale + oy;
+  // Draw edges
+  ctx.strokeStyle = 'rgba(100,110,140,0.2)';
+  ctx.lineWidth = 0.5;
+  simulation.force('link').links().forEach(l => {
+    ctx.beginPath(); ctx.moveTo(tx(l.source.x), ty(l.source.y)); ctx.lineTo(tx(l.target.x), ty(l.target.y)); ctx.stroke();
+  });
+  // Draw nodes
+  nodes.forEach(n => {
+    ctx.fillStyle = getNodeColor(n);
+    ctx.beginPath();
+    ctx.arc(tx(n.x), ty(n.y), n.id === 'me' ? 4 : 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Draw viewport rect
+  const svgEl = document.getElementById('graph-svg');
+  const transform = d3.zoomTransform(svgEl);
+  const vw = svgEl.clientWidth / transform.k;
+  const vh = svgEl.clientHeight / transform.k;
+  const vx = (-transform.x / transform.k);
+  const vy = (-transform.y / transform.k);
+  const vpDiv = document.getElementById('minimap-viewport');
+  vpDiv.style.left = tx(vx) + 'px';
+  vpDiv.style.top = ty(vy) + 'px';
+  vpDiv.style.width = Math.max(10, vw * scale) + 'px';
+  vpDiv.style.height = Math.max(10, vh * scale) + 'px';
+}
+
+// Minimap click to pan
+document.getElementById('minimap')?.addEventListener('click', function(event) {
+  const rect = this.getBoundingClientRect();
+  const mx = event.clientX - rect.left, my = event.clientY - rect.top;
+  const canvas = document.getElementById('minimap-canvas');
+  const w = canvas.width, h = canvas.height;
+  const nodes = simulation.nodes();
+  if (nodes.length === 0) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => { minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x); minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y); });
+  const pad = 50; minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+  const scaleM = Math.min(w / rangeX, h / rangeY);
+  const ox = (w - rangeX * scaleM) / 2, oy = (h - rangeY * scaleM) / 2;
+  // Convert minimap coords to graph coords - account for canvas CSS scaling
+  const cssW = this.clientWidth, cssH = this.clientHeight;
+  const graphX = ((mx * w / cssW) - ox) / scaleM + minX;
+  const graphY = ((my * h / cssH) - oy) / scaleM + minY;
+  const svgEl = document.getElementById('graph-svg');
+  const sw = svgEl.clientWidth, sh = svgEl.clientHeight;
+  const transform = d3.zoomTransform(svgEl);
+  svg.transition().duration(300).call(zoom.transform,
+    d3.zoomIdentity.translate(sw/2 - graphX * transform.k, sh/2 - graphY * transform.k).scale(transform.k));
+});
+
+// ===== Command Palette =====
+let cmdPaletteOpen = false;
+function showCommandPalette() {
+  cmdPaletteOpen = true;
+  const pal = document.getElementById('command-palette');
+  pal.style.display = 'block';
+  const input = document.getElementById('cmd-search');
+  input.value = '';
+  input.focus();
+  document.getElementById('cmd-results').innerHTML = '';
+}
+function hideCommandPalette() {
+  cmdPaletteOpen = false;
+  document.getElementById('command-palette').style.display = 'none';
+}
+document.getElementById('cmd-search')?.addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  const results = document.getElementById('cmd-results');
+  if (!q) { results.innerHTML = ''; return; }
+  const matches = data.nodes.filter(n => n.name.toLowerCase().includes(q)).slice(0, 10);
+  results.innerHTML = matches.map(n =>
+    `<div class="cmd-item" onclick="hideCommandPalette();focusNode('${n.id}')">
+      <span>${n.name}</span>
+      <span class="cmd-sub">${n.familiarity || ''} · ${(n.tags||[]).slice(0,2).join(', ')}</span>
+    </div>`
+  ).join('');
+});
+document.getElementById('cmd-search')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') hideCommandPalette();
+  if (e.key === 'Enter') {
+    const first = document.querySelector('.cmd-item');
+    if (first) first.click();
+  }
+});
+
+// ===== Shortcut Help =====
+function showShortcutHelp() {
+  const shortcuts = [
+    ['Ctrl/⌘ + Z', '撤销'],
+    ['Ctrl/⌘ + Y', '重做'],
+    ['Ctrl/⌘ + F', '搜索人物'],
+    ['Ctrl/⌘ + N', '快速添加'],
+    ['Escape', '关闭面板/弹窗'],
+    ['Delete / Backspace', '删除选中节点/边'],
+    ['?', '显示此帮助'],
+  ];
+  let html = `<div class="modal" style="width:380px"><h2 style="display:flex;justify-content:space-between;align-items:center">
+    快捷键 <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>`;
+  shortcuts.forEach(([key, desc]) => {
+    html += `<div class="shortcut-row"><span>${desc}</span><span class="shortcut-key">${key}</span></div>`;
+  });
+  html += '</div>';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ===== Keyboard Shortcuts =====
 document.addEventListener('keydown', (e) => {
+  const isInput = document.activeElement.matches('input,select,textarea');
   // Enter in add-name to quick add
   if (e.key === 'Enter' && document.activeElement.id === 'add-name') {
     quickAdd();
   }
-  // Escape to close panels
+  // Escape
   if (e.key === 'Escape') {
+    if (cmdPaletteOpen) { hideCommandPalette(); return; }
     closeDetail();
     hideContextMenu();
+    highlightedComponent = null;
     document.querySelector('.modal-overlay')?.remove();
+    render();
   }
-  // Delete selected node
-  if ((e.key === 'Delete' || e.key === 'Backspace') && !document.activeElement.matches('input,select,textarea')) {
+  // Undo/Redo
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); return; }
+  // Search
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); showCommandPalette(); return; }
+  // Quick add
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('collapsed')) toggleSidebar();
+    document.getElementById('add-name').focus();
+    return;
+  }
+  // Delete selected
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
     if (selectedNodeId && selectedNodeId !== 'me') deleteNode(selectedNodeId);
     else if (selectedEdgeId) deleteEdge(selectedEdgeId);
   }
+  // Shortcut help
+  if (e.key === '?' && !isInput) showShortcutHelp();
 });
 
 // Click on empty space to deselect
 svg.on('click', () => {
-  if (selectedNodeId || selectedEdgeId) {
+  if (selectedNodeId || selectedEdgeId || highlightedComponent) {
     selectedNodeId = null;
     selectedEdgeId = null;
+    highlightedComponent = null;
     closeDetail();
     render();
   }
 });
 
 // ===== Init =====
+refreshGraphSelect();
 setupSearch('connect-to');
 centerView();
 render();
