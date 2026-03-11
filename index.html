@@ -3226,16 +3226,17 @@ function communityAutoLabel(memberIds, allCommunityGroups) {
   });
 
   // Score = coverage × specificity
-  let bestTag = null, bestScore = -1;
+  let bestTags = null, bestScore = -1;
   const size = memberIds.length;
   for (const [tag, intCount] of Object.entries(tagInternalCount)) {
     const coverage = intCount / size;
     const total = allTagTotal[tag] || intCount;
     const specificity = intCount / total;
     const score = coverage * specificity;
-    if (score > bestScore) { bestScore = score; bestTag = tag; }
+    if (score > bestScore) { bestScore = score; bestTags = [tag]; }
+    else if (score === bestScore && bestScore > 0) { bestTags.push(tag); }
   }
-  return bestTag;
+  return bestTags ? bestTags.join(' / ') : null;
 }
 
 function renderCommunityHulls() {
